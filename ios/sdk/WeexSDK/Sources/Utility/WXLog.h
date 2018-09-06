@@ -29,44 +29,41 @@ typedef NS_ENUM(NSInteger, WXLogFlag) {
     WXLogFlagDebug      = 1 << 4
 };
 
-/**
- *  Use Log levels to filter logs.
- */
-typedef NS_ENUM(NSUInteger, WeexLogLevel){
+typedef NS_ENUM(NSUInteger, WEEXLogLevel){
     /**
      *  No logs
      */
-    WXLogLevelOff       = 0,
+    WEEXLogLevelOff       = 0,
     
     /**
      *  Error only
      */
-    WXLogLevelError     = WXLogFlagError,
+    WEEXLogLevelError     = WXLogFlagError,
     
     /**
      *  Error and warning
      */
-    WXLogLevelWarning   = WXLogLevelError | WXLogFlagWarning,
+    WEEXLogLevelWarning   = WEEXLogLevelError | WXLogFlagWarning,
     
     /**
      *  Error, warning and info
      */
-    WXLogLevelInfo      = WXLogLevelWarning | WXLogFlagInfo,
+    WEEXLogLevelInfo      = WEEXLogLevelWarning | WXLogFlagInfo,
     
     /**
      *  Log, warning info
      */
-    WXLogLevelLog       = WXLogFlagLog | WXLogLevelInfo,
+    WEEXLogLevelLog       = WXLogFlagLog | WEEXLogLevelInfo,
     
     /**
      *  Error, warning, info and debug logs
      */
-    WXLogLevelDebug     = WXLogLevelLog | WXLogFlagDebug,
+    WEEXLogLevelDebug     = WEEXLogLevelLog | WXLogFlagDebug,
     
     /**
      *  All
      */
-    WXLogLevelAll       = NSUIntegerMax
+    WEEXLogLevelAll       = NSUIntegerMax
 };
 
 /**
@@ -79,7 +76,7 @@ typedef NS_ENUM(NSUInteger, WeexLogLevel){
 /**
  * External log level.
  */
-- (WXLogLevel)logLevel;
+- (WEEXLogLevel)logLevel;
 
 - (void)log:(WXLogFlag)flag message:(NSString *)message;
 
@@ -87,9 +84,9 @@ typedef NS_ENUM(NSUInteger, WeexLogLevel){
 
 @interface WXLog : NSObject
 
-+ (WXLogLevel)logLevel;
++ (WEEXLogLevel)logLevel;
 
-+ (void)setLogLevel:(WXLogLevel)level;
++ (void)setLogLevel:(WEEXLogLevel)level;
 
 + (NSString *)logLevelString;
 
