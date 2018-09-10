@@ -49,7 +49,7 @@
 #ifdef DEBUG
 static const WEEXLogLevel defaultLogLevel = WEEXLogLevelLog;
 #else
-static const WXLogLevel defaultLogLevel = WXLogLevelWarning;
+static const WEEXLogLevel defaultLogLevel = WEEXLogLevelWarning;
 #endif
 
 static id<WXLogProtocol> _externalLog;
