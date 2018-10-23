@@ -670,6 +670,7 @@ typedef NS_ENUM(NSInteger, Direction) {
     if (_sliderChangeEvent) {
         [self fireEvent:@"change" params:@{@"index":@(index)} domChanges:@{@"attrs": @{@"index": @(index)}}];
     }
+    _index = index;
     self.currentIndex = index;
 }
 
