@@ -194,9 +194,9 @@
     [WXAnalyzerCenter sharedInstance]->_interactionLogSwitch = isOpen;
     [WXCoreBridge registerCoreEnv:@"switchInteractionLog" withValue:isOpen?@"true":@"false"];
 #ifdef DEBUG
-    [WXLog setLogLevel: isOpen?WXLogLevelDebug:WXLogLevelLog];
+    [WXLog setLogLevel: isOpen?WEEXLogLevelDebug:WEEXLogLevelLog];
 #else
-     [WXLog setLogLevel: isOpen?WXLogLevelDebug:WXLogLevelWarning];
+     [WXLog setLogLevel: isOpen?WEEXLogLevelDebug:WEEXLogLevelWarning];
 #endif
 
 #pragma clang diagnostic push
