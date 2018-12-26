@@ -29,7 +29,6 @@
 #import "WXComponent+Layout.h"
 #import <pthread/pthread.h>
 #import <CoreText/CoreText.h>
-#import "WXComponent+Layout.h"
 
 // WXText is a non-public is not permitted
 @interface WXTextView : WXView
@@ -139,7 +138,6 @@ CGFloat WXTextDefaultLineThroughWidth = 1.2;
     WXTextStyle _fontStyle;
     NSUInteger _lines;
     NSTextAlignment _textAlign;
-    NSString *_direction;
     WXTextDecoration _textDecoration;
     NSString *_textOverflow;
     CGFloat _lineHeight;
@@ -180,6 +178,8 @@ CGFloat WXTextDefaultLineThroughWidth = 1.2;
         pthread_mutexattr_init(&(_propertMutexAttr));
         pthread_mutexattr_settype(&(_propertMutexAttr), PTHREAD_MUTEX_RECURSIVE);
         pthread_mutex_init(&(_ctAttributedStringMutex), &(_propertMutexAttr));
+        
+        _textAlign = NSTextAlignmentNatural;
         
         if ([attributes objectForKey:@"coretext"]) {
             _useCoreTextAttr = [WXConvert NSString:attributes[@"coretext"]];
@@ -273,15 +273,18 @@ do {\
     WX_STYLE_FILL_TEXT_PIXEL(lineHeight, lineHeight, YES)
     WX_STYLE_FILL_TEXT_PIXEL(letterSpacing, letterSpacing, YES)
     WX_STYLE_FILL_TEXT(wordWrap, wordWrap, NSString, YES);
-    WX_STYLE_FILL_TEXT(direction, direction, NSString, YES)
     if (_fontFamily && !_observerIconfont) {
         // notification received when custom icon font file download finish
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(repaintText:) name:WX_ICONFONT_DOWNLOAD_NOTIFICATION object:nil];
         _observerIconfont = YES;
     }
     
+    if (self.flexCssNode == nullptr) {
+        return;
+    }
+    
         UIEdgeInsets flex_padding = {
-            WXFloorPixelValue(self.flexCssNode->getPaddingTop()+ self.flexCssNode->getBorderWidthTop()),
+            WXFloorPixelValue(self.flexCssNode->getPaddingTop() + self.flexCssNode->getBorderWidthTop()),
             WXFloorPixelValue(self.flexCssNode->getPaddingLeft() + self.flexCssNode->getBorderWidthLeft()),
             WXFloorPixelValue(self.flexCssNode->getPaddingBottom() + self.flexCssNode->getBorderWidthBottom()),
             WXFloorPixelValue(self.flexCssNode->getPaddingRight() + self.flexCssNode->getBorderWidthRight())
@@ -357,6 +360,10 @@ do {\
     return [[WXTextView alloc] init];
 }
 
+- (void)layoutDirectionDidChanged:(BOOL)isRTL {
+    [self setNeedsRepaint];
+}
+
 - (BOOL)needsDrawRect
 {
     return YES;
@@ -379,6 +386,15 @@ do {\
 {
     __weak typeof(self) weakSelf = self;
     return ^CGSize (CGSize constrainedSize) {
+        __strong typeof(self) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return CGSizeZero;
+        }
+        
+        if (strongSelf.flexCssNode == nullptr) {
+            return CGSizeZero;
+        }
+        
 #ifdef DEBUG
         WXLogDebug(@"flexLayout -> measureblock %@, constrainedSize:%@",
               self.type,
@@ -389,36 +405,36 @@ do {\
         NSTextStorage *textStorage = nil;
         
         //TODO:more elegant way to use max and min constrained size
-            if (!isnan(weakSelf.flexCssNode->getMinWidth())) {
-                constrainedSize.width = MAX(constrainedSize.width, weakSelf.flexCssNode->getMinWidth());
+            if (!isnan(strongSelf.flexCssNode->getMinWidth())) {
+                constrainedSize.width = MAX(constrainedSize.width, strongSelf.flexCssNode->getMinWidth());
             }
             
-            if (!isnan(weakSelf.flexCssNode->getMaxWidth())) {
-                constrainedSize.width = MIN(constrainedSize.width, weakSelf.flexCssNode->getMaxWidth());
+            if (!isnan(strongSelf.flexCssNode->getMaxWidth())) {
+                constrainedSize.width = MIN(constrainedSize.width, strongSelf.flexCssNode->getMaxWidth());
             }
         
         if (![self useCoreText]) {
-            textStorage = [weakSelf textStorageWithWidth:constrainedSize.width];
+            textStorage = [strongSelf textStorageWithWidth:constrainedSize.width];
             NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
             NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
             computedSize = [layoutManager usedRectForTextContainer:textContainer].size;
         } else {
-            computedSize = [weakSelf calculateTextHeightWithWidth:constrainedSize.width];
+            computedSize = [strongSelf calculateTextHeightWithWidth:constrainedSize.width];
         }
-            if (!isnan(weakSelf.flexCssNode->getMinWidth())) {
-                computedSize.width = MAX(computedSize.width, weakSelf.flexCssNode->getMinWidth());
+            if (!isnan(strongSelf.flexCssNode->getMinWidth())) {
+                computedSize.width = MAX(computedSize.width, strongSelf.flexCssNode->getMinWidth());
             }
             
-            if (!isnan(weakSelf.flexCssNode->getMaxWidth())) {
-                computedSize.width = MIN(computedSize.width, weakSelf.flexCssNode->getMaxWidth());
+            if (!isnan(strongSelf.flexCssNode->getMaxWidth())) {
+                computedSize.width = MIN(computedSize.width, strongSelf.flexCssNode->getMaxWidth());
             }
             
-            if (!isnan(weakSelf.flexCssNode->getMinHeight())) {
-                computedSize.height = MAX(computedSize.height, weakSelf.flexCssNode->getMinHeight());
+            if (!isnan(strongSelf.flexCssNode->getMinHeight())) {
+                computedSize.height = MAX(computedSize.height, strongSelf.flexCssNode->getMinHeight());
             }
             
-            if (!isnan(weakSelf.flexCssNode->getMaxHeight())) {
-                computedSize.height = MIN(computedSize.height, weakSelf.flexCssNode->getMaxHeight());
+            if (!isnan(strongSelf.flexCssNode->getMaxHeight())) {
+                computedSize.height = MIN(computedSize.height, strongSelf.flexCssNode->getMaxHeight());
             }
         if (textStorage && [WXUtility isBlankString:textStorage.string]) {
             //  if the text value is empty or nil, then set the height is 0.
@@ -502,11 +518,12 @@ do {\
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
     
     // handle text direction style, default ltr
-    BOOL isRtl = [_direction isEqualToString:@"rtl"];
+    NSTextAlignment retAlign = _textAlign;
+    BOOL isRtl = [self isDirectionRTL];
     if (isRtl) {
-        if (0 == _textAlign) {
+        if (0 == retAlign) {
             //force text right-align if don't specified any align.
-            _textAlign = NSTextAlignmentRight;
+            retAlign = NSTextAlignmentRight;
         }
         paragraphStyle.baseWritingDirection = NSWritingDirectionRightToLeft;
     } else {
@@ -516,8 +533,8 @@ do {\
         paragraphStyle.baseWritingDirection =  NSWritingDirectionNatural;
     }
     
-    if (_textAlign) {
-        paragraphStyle.alignment = _textAlign;
+    if (retAlign) {
+        paragraphStyle.alignment = retAlign;
     }
     
     if ([[_wordWrap lowercaseString] isEqualToString:@"break-word"]) {
@@ -585,11 +602,12 @@ do {\
     NSMutableParagraphStyle *paragraphStyle = [NSMutableParagraphStyle new];
 
     // handle text direction style, default ltr
-    BOOL isRtl = [_direction isEqualToString:@"rtl"];
+    NSTextAlignment retAlign = _textAlign;
+    BOOL isRtl = [self isDirectionRTL];
     if (isRtl) {
-        if (0 == _textAlign) {
+        if (0 == retAlign) {
             //force text right-align if don't specified any align.
-            _textAlign = NSTextAlignmentRight;
+            retAlign = NSTextAlignmentRight;
         }
         paragraphStyle.baseWritingDirection = NSWritingDirectionRightToLeft;
     } else {
@@ -599,8 +617,8 @@ do {\
         paragraphStyle.baseWritingDirection =  NSWritingDirectionNatural;
     }
     
-    if (_textAlign) {
-        paragraphStyle.alignment = _textAlign;
+    if (retAlign) {
+        paragraphStyle.alignment = retAlign;
     }
     
     if (_lineHeight) {
@@ -752,34 +770,28 @@ do {\
         CGContextScaleCTM(context, 1.0, -1.0);
         
         NSAttributedString * attributedStringCopy = [self ctAttributedString];
-        //add path
-        CGPathRef cgPath = NULL;
-        cgPath = CGPathCreateWithRect(textFrame, NULL);
-        CTFrameRef _coreTextFrameRef = NULL;
-        if (_coreTextFrameRef) {
-            CFRelease(_coreTextFrameRef);
-            _coreTextFrameRef = NULL;
-        }
-        if(!attributedStringCopy) {
+        if (!attributedStringCopy) {
             return;
         }
+        //add path
+        CGPathRef cgPath = CGPathCreateWithRect(textFrame, NULL);
         CTFramesetterRef ctframesetterRef = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)(attributedStringCopy));
-        _coreTextFrameRef = CTFramesetterCreateFrame(ctframesetterRef, CFRangeMake(0, attributedStringCopy.length), cgPath, NULL);
-        CFArrayRef ctLines = NULL;
-        if (NULL == _coreTextFrameRef) {
+        CTFrameRef coreTextFrameRef = CTFramesetterCreateFrame(ctframesetterRef, CFRangeMake(0, attributedStringCopy.length), cgPath, NULL);
+        if (NULL == coreTextFrameRef) {
             // try to protect crash from frame is NULL
+            CFRelease(ctframesetterRef);
+            CGPathRelease(cgPath);
             return;
         }
         CFRelease(ctframesetterRef);
-        ctframesetterRef = NULL;
-        ctLines = CTFrameGetLines(_coreTextFrameRef);
+        CFArrayRef ctLines = CTFrameGetLines(coreTextFrameRef);
         CFIndex lineCount = CFArrayGetCount(ctLines);
         NSMutableArray * mutableLines = [NSMutableArray new];
         CGPoint lineOrigins[lineCount];
         NSUInteger rowCount = 0;
         BOOL needTruncation = NO;
         CTLineRef ctTruncatedLine = NULL;
-        CTFrameGetLineOrigins(_coreTextFrameRef, CFRangeMake(0, 0), lineOrigins);
+        CTFrameGetLineOrigins(coreTextFrameRef, CFRangeMake(0, 0), lineOrigins);
         
         CGFloat fixDescent = 0;
         if (lineCount > 0 && _lineHeight && WX_SYS_VERSION_LESS_THAN(@"10.0")) {
@@ -831,16 +843,14 @@ do {\
                     ctTruncatedLine = NULL;
                     continue;
                 }
-            }else {
+            } else {
                 [self drawTextWithRuns:runs context:context lineOrigin:lineOrigin];
             }
         }
         
         [mutableLines removeAllObjects];
         CGPathRelease(cgPath);
-        CFRelease(_coreTextFrameRef);
-        _coreTextFrameRef = NULL;
-        cgPath = NULL;
+        CFRelease(coreTextFrameRef);
         CGContextRestoreGState(context);
     }
 }

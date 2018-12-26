@@ -32,6 +32,7 @@
 #import <objc/runtime.h>
 #import <UIKit/UIGestureRecognizerSubclass.h>
 #import "WXComponent+PseudoClassManagement.h"
+#import "WXCoreBridge.h"
 
 #pragma clang diagnostic ignored "-Wobjc-protocol-method-implementation"
 
@@ -165,8 +166,14 @@
     
     NSArray *handlerArguments = [self _paramsForEvent:eventName];
     NSString *ref = _templateComponent ? _templateComponent.ref  : self.ref;
-    
-    [[WXSDKManager bridgeMgr] fireEvent:self.weexInstance.instanceId ref:ref type:eventName params:dict domChanges:domChanges handlerArguments:handlerArguments];
+    if (self.weexInstance.dataRender) {
+        WXPerformBlockOnComponentThread(^{
+            [WXCoreBridge fireEvent:self.weexInstance.instanceId ref:ref event:eventName args:dict];
+        });
+    }
+    else {
+        [[WXSDKManager bridgeMgr] fireEvent:self.weexInstance.instanceId ref:ref type:eventName params:dict domChanges:domChanges handlerArguments:handlerArguments];
+    }
 }
 
 - (NSString *)recursiveFindTemplateIdWithComponent:(WXComponent *)component
@@ -312,7 +319,14 @@ if ([removeEventName isEqualToString:@#eventName1]||[removeEventName isEqualToSt
     [self removeTouchCancelEvent];
     [self removeSwipeEvent];
     [self removePseudoTouchEvent];
+}
 
+- (void)_collectSubcomponents:(NSMutableArray *)components
+{
+    for (WXComponent* c in _subcomponents) {
+        [components addObject:c];
+        [c _collectSubcomponents:components];
+    }
 }
 
 #pragma mark - Appear & Disappear

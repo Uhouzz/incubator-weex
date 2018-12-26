@@ -20,6 +20,7 @@ package com.taobao.weex.ui.component;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Rect;
 import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -59,6 +60,7 @@ import com.taobao.weex.utils.TypefaceUtil;
 import com.taobao.weex.utils.WXLogUtils;
 import com.taobao.weex.utils.WXResourceUtils;
 import com.taobao.weex.utils.WXUtils;
+import com.taobao.weex.utils.WXViewUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -123,6 +125,18 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
 
       }
     });
+  }
+
+  @Override
+  protected void layoutDirectionDidChanged(boolean isRTL) {
+    String alignStr = (String) getStyles().get(Constants.Name.TEXT_ALIGN);
+    int textAlign = getTextAlign(alignStr);
+    if (textAlign <= 0) {
+      textAlign = Gravity.START;
+    }
+    if (getHostView() instanceof WXEditText) {
+      getHostView().setGravity(textAlign | getVerticalGravity());
+    }
   }
 
   protected final float getMeasuredLineHeight() {
@@ -348,6 +362,7 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
         public void onTextChanged(CharSequence s, int start, int before, int count) {
           if (mIgnoreNextOnInputEvent) {
             mIgnoreNextOnInputEvent = false;
+            mBeforeText = s.toString();
             return;
           }
 
@@ -413,6 +428,18 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
   @Override
   protected boolean setProperty(String key, Object param) {
     switch (key) {
+      case Constants.Name.DISABLED:
+        Boolean disabled = WXUtils.getBoolean(param, null);
+        if (disabled != null && mHost != null) {
+          if (disabled) {
+            mHost.setFocusable(false);
+            mHost.setFocusableInTouchMode(false);
+          } else {
+            mHost.setFocusableInTouchMode(true);
+            mHost.setFocusable(true);
+          }
+        }
+        return true;
       case Constants.Name.PLACEHOLDER:
         String placeholder = WXUtils.getString(param, null);
         if (placeholder != null)
@@ -582,6 +609,9 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
     if ((view = getHostView()) == null) {
       return;
     }
+    if (TextUtils.equals(view.getText(), value)) {
+      return;
+    }
 
     mIgnoreNextOnInputEvent = true;
     int oldIndex = view.getSelectionStart();
@@ -734,10 +764,12 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
   }
 
   private int getTextAlign(String textAlign) {
-    int align = Gravity.START;
+    boolean isRTL = isLayoutRTL();
+    int align = isRTL ? Gravity.END : Gravity.START;
     if (TextUtils.isEmpty(textAlign)) {
       return align;
     }
+
     if (textAlign.equals(Constants.Value.LEFT)) {
       align = Gravity.START;
     } else if (textAlign.equals(Constants.Value.CENTER)) {
@@ -889,7 +921,7 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
     if (host == null) {
       return;
     }
-    Context context = host.getContext();
+    final Context context = host.getContext();
     if (context != null && context instanceof Activity) {
       SoftKeyboardDetector.registerKeyboardEventListener((Activity) context, new SoftKeyboardDetector.OnKeyboardEventListener() {
         @Override
@@ -897,6 +929,13 @@ public abstract class AbstractEditComponent extends WXComponent<WXEditText> {
           if (mListeningKeyboard) {
             Map<String, Object> event = new HashMap<>(1);
             event.put("isShow", isShown);
+            if (isShown) {
+              Rect r = new Rect();
+              ((Activity) context).getWindow().getDecorView().getWindowVisibleDisplayFrame(r);
+              float keyboardSize = WXViewUtils.getWebPxByWidth(WXViewUtils.getScreenHeight(context) - (r.bottom - r.top),
+                      getInstance().getInstanceViewPortWidth());
+              event.put("keyboardSize", keyboardSize);
+            }
             fireEvent(Constants.Event.KEYBOARD, event);
           }
           if (!isShown) {

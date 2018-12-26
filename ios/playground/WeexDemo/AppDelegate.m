@@ -20,9 +20,7 @@
 #import "AppDelegate.h"
 #import "WXDemoViewController.h"
 #import "UIViewController+WXDemoNaviBar.h"
-#import "WXStreamModule.h"
 #import "WXEventModule.h"
-#import "WXNavigationDefaultImpl.h"
 #import "WXImgLoaderDefaultImpl.h"
 #import "DemoDefine.h"
 #import "WXScannerVC.h"
@@ -38,6 +36,7 @@
 #import "WXNavigationHandlerImpl.h"
 //#import "WXAnalyzerCenter.h"
 #import "WXApmGeneratorImpl.h"
+#import "WXWebSocketDefaultImpl.h"
 
 
 #ifdef DEBUG
@@ -125,6 +124,7 @@
     [WXSDKEngine registerHandler:[WXConfigCenterDefaultImpl new] withProtocol:@protocol(WXConfigCenterProtocol)];
     [WXSDKEngine registerHandler:[WXNavigationHandlerImpl new] withProtocol:@protocol(WXNavigationProtocol)];
     [WXSDKEngine registerHandler:[WXApmGeneratorImpl new] withProtocol:@protocol(WXApmGeneratorProtocol)];
+    [WXSDKEngine registerHandler:[WXWebSocketDefaultImpl new] withProtocol:@protocol(WXWebSocketHandler)];
     
     [WXSDKEngine registerComponent:@"select" withClass:NSClassFromString(@"WXSelectComponent")];
     [WXSDKEngine registerModule:@"event" withClass:[WXEventModule class]];

@@ -35,6 +35,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.text.TextUtils;
 import android.util.SparseArray;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -174,6 +175,37 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
   }
 
   @Override
+  public void setMarginsSupportRTL(ViewGroup.MarginLayoutParams lp, int left, int top, int right, int bottom) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR1) {
+      lp.setMargins(left, top, right, bottom);
+      lp.setMarginStart(left);
+      lp.setMarginEnd(right);
+    } else {
+      if (lp instanceof FrameLayout.LayoutParams) {
+        FrameLayout.LayoutParams lp_frameLayout = (FrameLayout.LayoutParams) lp;
+        if (this.isLayoutRTL()) {
+          lp_frameLayout.gravity = Gravity.RIGHT | Gravity.TOP;
+          lp.setMargins(right, top, left, bottom);
+        } else {
+          lp_frameLayout.gravity = Gravity.LEFT | Gravity.TOP;
+          lp.setMargins(left, top, right, bottom);
+        }
+      } else {
+        lp.setMargins(left, top, right, bottom);
+      }
+    }
+  }
+
+  @Override
+  public void setLayout(WXComponent component) {
+    if (component.getHostView() != null) {
+      int layoutDirection = component.isLayoutRTL() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR;
+      ViewCompat.setLayoutDirection(component.getHostView(), layoutDirection);
+    }
+    super.setLayout(component);
+  }
+
+  @Override
   protected void onHostViewInitialized(T host) {
     super.onHostViewInitialized(host);
 
@@ -215,7 +247,7 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
     int screenH = WXViewUtils.getScreenHeight(WXEnvironment.sApplication);
     int weexH = WXViewUtils.getWeexHeight(getInstanceId());
     int outHeight = height > (weexH >= screenH ? screenH : weexH) ? weexH - getAbsoluteY() : height;
-    return super.measure((int)(width+mColumnGap), outHeight);
+    return super.measure(width, outHeight);
   }
 
   public int getOrientation() {
@@ -248,7 +280,8 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
     } else {
       params.width = width;
       params.height = height;
-      params.setMargins(left, 0, right, 0);
+
+      this.setMarginsSupportRTL(params, left, 0, right, 0);
     }
     return params;
   }
@@ -286,7 +319,7 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
       @Override
       public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
         super.onScrollStateChanged(recyclerView, newState);
-
+        getScrollStartEndHelper().onScrollStateChanged(newState);
         List<OnWXScrollListener> listeners = getInstance().getWXScrollListeners();
         int size;
         OnWXScrollListener listener;
@@ -330,8 +363,6 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
         }
       }
     });
-
-
 
     bounceRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
       @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
@@ -968,10 +999,10 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
             if (component.getRealView() != null) {
               return new ListBaseViewHolder(component, viewType);
             } else {
-              ((WXCell) component).lazy(false);
+              component.lazy(false);
               component.createView();
               component.applyLayoutAndEvent(component);
-              return new ListBaseViewHolder(component, viewType);
+              return new ListBaseViewHolder(component, viewType, true);
             }
           } else if (component instanceof WXBaseRefresh) {
             return createVHForRefreshComponent(viewType);
@@ -1187,8 +1218,7 @@ public abstract class BasicListComponent<T extends ViewGroup & ListComponentView
       }
       float offsetParsed = WXViewUtils.getRealPxByWidth(Integer.parseInt(offset),getInstance().getInstanceViewPortWidth());
 
-      if (offScreenY < offsetParsed) {
-
+      if (offScreenY <= offsetParsed && getEvents().contains(Constants.Event.LOADMORE)) {
         if (mListCellCount != mChildren.size()
             || mForceLoadmoreNextTime) {
           fireEvent(Constants.Event.LOADMORE);

@@ -411,6 +411,15 @@
     }
     
     CGContextStrokePath(context);
+    
+    //clipRadius is beta feature
+    //TO DO: remove _clipRadius property
+    if (_clipToBounds && _clipRadius) {
+        BOOL radiusEqual = _borderTopLeftRadius == _borderTopRightRadius && _borderTopRightRadius == _borderBottomRightRadius && _borderBottomRightRadius == _borderBottomLeftRadius;
+        if (!radiusEqual) {
+            self.layer.mask = [self drawBorderRadiusMaskLayer:rect];
+        }
+    }
 }
 
 - (BOOL)_needsDrawBorder
@@ -572,7 +581,9 @@ do {\
 - (CAShapeLayer *)drawBorderRadiusMaskLayer:(CGRect)rect
 {
     if ([self hasBorderRadiusMaskLayer]) {
-        UIBezierPath *bezierPath = [UIBezierPath wx_bezierPathWithRoundedRect:rect topLeft:_borderTopLeftRadius topRight:_borderTopRightRadius bottomLeft:_borderBottomLeftRadius bottomRight:_borderBottomRightRadius];
+        WXRoundedRect *borderRect = [[WXRoundedRect alloc] initWithRect:rect topLeft:_borderTopLeftRadius topRight:_borderTopRightRadius bottomLeft:_borderBottomLeftRadius bottomRight:_borderBottomRightRadius];
+        WXRadii *radii = borderRect.radii;
+        UIBezierPath *bezierPath = [UIBezierPath wx_bezierPathWithRoundedRect:rect topLeft:radii.topLeft topRight:radii.topRight bottomLeft:radii.bottomLeft bottomRight:radii.bottomRight];
         CAShapeLayer *maskLayer = [CAShapeLayer layer];
         maskLayer.path = bezierPath.CGPath;
         return maskLayer;

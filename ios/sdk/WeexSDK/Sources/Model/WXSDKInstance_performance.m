@@ -27,15 +27,14 @@
 #import "WXCellComponent.h"
 #import "WXImageComponent.h"
 #import "WXUtility.h"
+#import "WXAnalyzerCenter+Transfer.h"
 
 @interface WXPerformance()
-@property (nonatomic ,assign) bool hasRecordFsRenderTimeByPosition;
-@property (nonatomic ,assign) double interactionAddCountRecord;
+@property (nonatomic, assign) bool hasRecordFsRenderTimeByPosition;
+@property (nonatomic, assign) double interactionAddCountRecord;
 @end
 
 @implementation WXPerformance
-
-
 
 - (void) recordComponentCreatePerformance:(double) diffTime forComponent:(WXComponent *)targetComponent
 {
@@ -44,8 +43,9 @@
 }
 
 /** on UI thread **/
-- (void)onViewLoad:(WXComponent *)targetComponent{
-    if (targetComponent.hasAdd) {
+- (void)onViewLoad:(WXComponent *)targetComponent
+{
+    if (targetComponent.hasAdd || targetComponent.ignoreInteraction) {
         return;
     }
     targetComponent.hasAdd = true;
@@ -68,8 +68,14 @@
 
 - (void) _handleRenderTime:(WXComponent*)targetComponent withModifyTime:(double)modifyTime
 {
+    if (nil == targetComponent) {
+        return;
+    }
     double diff = modifyTime - self.renderTimeOrigin;
     if (diff > 8000) {
+        return;
+    }
+    if ([targetComponent.type isEqualToString:@"_root"]) {
         return;
     }
     
@@ -80,14 +86,11 @@
     
     CGRect absoluteFrame = [targetComponent.view.superview convertRect:targetComponent.view.frame toView:targetComponent.weexInstance.rootView];
     CGRect rootFrame = targetComponent.weexInstance.rootView.frame;
-    CGPoint leftTop = absoluteFrame.origin;
-    CGPoint rightBottom = CGPointMake(absoluteFrame.origin.x+absoluteFrame.size.width, absoluteFrame.origin.y+absoluteFrame.size.height);
-
     
-    if (!self.hasRecordFsRenderTimeByPosition && rightBottom.y > rootFrame.size.height +1 && ![self _isViewGroup:targetComponent] ) {
+    if (!self.hasRecordFsRenderTimeByPosition && absoluteFrame.origin.y+absoluteFrame.size.height > rootFrame.size.height +1 && ![self _isViewGroup:targetComponent] ) {
         self.newFsRenderTime = diff;
         self.hasRecordFsRenderTimeByPosition = true;
-        [targetComponent.weexInstance.apmInstance onStage:KEY_PAGE_STAGES_FSRENDER];
+        [targetComponent.weexInstance.apmInstance onStage:KEY_PAGE_STAGES_NEW_FSRENDER];
     }
     
     UIView *root = targetComponent.weexInstance.rootView;
@@ -102,23 +105,21 @@
         return;
     }
     
-    bool inScreen = CGRectContainsPoint(rootFrame, leftTop) || CGRectContainsPoint(rootFrame, rightBottom);
+    bool inScreen = CGRectIntersectsRect(rootFrame, absoluteFrame);
     if (!inScreen) {
         return;
     }
     
-#ifdef DEBUG
-    WXLogDebug(@"onElementChange _-> size, count :%f,inScreen:%d,  lefttop:%@,rightBottom:%@, rootFrame:%@",
-          self.interactionAddCountRecord,
-          inScreen,
-          NSStringFromCGPoint(leftTop),
-          NSStringFromCGPoint(rightBottom),
-          NSStringFromCGRect(targetComponent.weexInstance.rootView.frame)
-          );
-#endif
+    if (!targetComponent.weexInstance.apmInstance.hasRecordFirstInterationView) {
+        targetComponent.weexInstance.apmInstance.hasRecordFirstInterationView = YES;
+        [targetComponent.weexInstance.apmInstance onStage:KEY_PAGE_STAGES_FIRST_INTERACTION_VIEW];
+    }
+    [WXAnalyzerCenter transferInteractionInfo:targetComponent];
     [targetComponent.weexInstance.apmInstance onStage:KEY_PAGE_STAGES_INTERACTION];
     self.interactionLimitAddOpCount++;
     self.interactionAddCount = self.interactionAddCountRecord;
+    [targetComponent.weexInstance.apmInstance updateMaxStats:KEY_PAGE_STATS_I_SCREEN_VIEW_COUNT curMaxValue:self.interactionLimitAddOpCount];
+    [targetComponent.weexInstance.apmInstance updateMaxStats:KEY_PAGE_STATS_I_ALL_VIEW_COUNT curMaxValue:self.interactionAddCount];
     self.interactionTime = self.interactionTime < diff ? diff :self.interactionTime;
 }
 
@@ -163,12 +164,13 @@
     return isViewGroup;
 }
 
-- (void)onInstanceCreateFinish
+- (void)onInstanceRenderSuccess:(WXSDKInstance*) instance;
 {
     if (self.hasRecordFsRenderTimeByPosition) {
         return;
     }
     self.newFsRenderTime = CACurrentMediaTime()*1000 - self.renderTimeOrigin;
+    [instance.apmInstance onStage:KEY_PAGE_STAGES_NEW_FSRENDER];
 }
 
 @end

@@ -19,6 +19,7 @@
 
 #import "WXComponent+DataBinding.h"
 #import "WXComponent_internal.h"
+#import "WXComponent+Layout.h"
 #import "WXSDKInstance_private.h"
 #import "WXComponentManager.h"
 #import "WXSDKManager.h"
@@ -28,6 +29,7 @@
 #import "WXUtility.h"
 #import "WXRecycleListComponent.h"
 #import "WXRecycleListDataManager.h"
+#import "WXCoreBridge.h"
 
 #import <JavaScriptCore/JavaScriptCore.h>
 
@@ -168,7 +170,7 @@ static JSContext *jsContext;
         if (!needDisplay) {
             self.displayType = WXDisplayTypeNone;
             return;
-        } else if (needDisplay && !_isNeedJoinLayoutSystem) {
+        } else if (needDisplay) {
             self.displayType = WXDisplayTypeBlock;
         }
     }
@@ -244,14 +246,22 @@ static JSContext *jsContext;
         
         if (!exsitingComponent) {
             [self.weexInstance.componentManager startComponentTasks];
-            [self.supercomponent _insertSubcomponent:component atIndex:startIndex + idx];
-            [self.weexInstance.componentManager _addUITask:^{
-                [self.supercomponent insertSubview:component atIndex:startIndex + idx];
-            }];
+            BOOL inserted = [self.supercomponent _insertSubcomponent:component atIndex:startIndex + idx];
+            if (inserted) {
+                // add to layout tree
+                [WXCoreBridge addChildRenderObject:component->_flexCssNode toParent:self.supercomponent->_flexCssNode];
+                
+                [self.weexInstance.componentManager _addUITask:^{
+                    [self.supercomponent insertSubview:component atIndex:startIndex + idx];
+                }];
+            }
+            else {
+                WXLogError(@"fail to insert copied component for data binding.");
+            }
         }
     }];
     
-    // set displaty:none to the redundant components;
+    // set display:none to the redundant components;
     NSUInteger i = startIndex + repeatData.count;
     while (i < self.supercomponent.subcomponents.count) {
         WXComponent *component = self.supercomponent.subcomponents[i];
@@ -300,6 +310,10 @@ static JSContext *jsContext;
 {
     WXAssertComponentThread();
     
+    if (_bindingExpressions == nullptr) {
+        _bindingExpressions = new std::vector<WXJSExpression *>();
+    }
+    
     NSMutableDictionary *bindingMap;
     switch (type) {
         case WXDataBindingTypeProp:
@@ -324,6 +338,7 @@ static JSContext *jsContext;
             NSString *bindingExpression = binding[WXBindingIdentify];
             WXJSASTParser *parser = [WXJSASTParser parserWithScript:bindingExpression];
             WXJSExpression *expression = [parser parseExpression];
+            self->_bindingExpressions->push_back(expression);
             WXDataBindingBlock block = [self bindingBlockWithExpression:expression];
             bindingMap[name] = block;
         } else if ([binding isKindOfClass:[NSArray class]]) {
@@ -336,6 +351,7 @@ static JSContext *jsContext;
                     NSString *bindingExpression = bindingInArray[WXBindingIdentify];
                     WXJSASTParser *parser = [WXJSASTParser parserWithScript:bindingExpression];
                     WXJSExpression *expression = [parser parseExpression];
+                    self->_bindingExpressions->push_back(expression);
                     WXDataBindingBlock block = [self bindingBlockWithExpression:expression];
                     bindingBlocksForIndex[@(idx)] = block;
                 }
@@ -362,17 +378,19 @@ static JSContext *jsContext;
         
         if (type == WXDataBindingTypeAttributes) {
             if ([WXBindingOnceIdentify isEqualToString:name]) {
-                _dataBindOnce = [WXConvert BOOL:binding];
+                self->_dataBindOnce = [WXConvert BOOL:binding];
             } else if ([WXBindingMatchIdentify isEqualToString:name]) {
                 WXJSASTParser *parser = [WXJSASTParser parserWithScript:binding];
                 WXJSExpression *expression = [parser parseExpression];
-                _bindingMatch = [self bindingBlockWithExpression:expression];
+                self->_bindingExpressions->push_back(expression);
+                self->_bindingMatch = [self bindingBlockWithExpression:expression];
             } else if ([WXBindingRepeatIdentify isEqualToString:name]) {
                 WXJSASTParser *parser = [WXJSASTParser parserWithScript:binding[WXBindingRepeatExprIdentify]];
                 WXJSExpression *expression = [parser parseExpression];
-                _bindingRepeat = [self bindingBlockWithExpression:expression];
-                _repeatIndexIdentify = binding[WXBindingRepeatIndexIdentify];
-                _repeatLabelIdentify = binding[WXBindingRepeatLabelIdentify];
+                self->_bindingExpressions->push_back(expression);
+                self->_bindingRepeat = [self bindingBlockWithExpression:expression];
+                self->_repeatIndexIdentify = binding[WXBindingRepeatIndexIdentify];
+                self->_repeatLabelIdentify = binding[WXBindingRepeatLabelIdentify];
             }
         }
     }];
@@ -383,7 +401,15 @@ static JSContext *jsContext;
     if (!expression) {
         return nil;
     }
+    
+    __weak typeof(self) weakSelf = self;
     WXDataBindingBlock block = ^id(NSDictionary *data, BOOL *needUpdate) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            *needUpdate = NO;
+            return nil;
+        }
+        
         if (expression->is<WXJSStringLiteral>()) {
             *needUpdate = NO;
             return [NSString stringWithCString:(((WXJSStringLiteral *)expression)->value).c_str() encoding:[NSString defaultCStringEncoding]];
@@ -409,9 +435,9 @@ static JSContext *jsContext;
         } else if (expression->is<WXJSMemberExpression>()) {
             WXJSMemberExpression *member = (WXJSMemberExpression *)expression;
             BOOL objectNeedUpdate = NO, propertyNeedUpdate = NO;
-            id object = [self bindingBlockWithExpression:member->object](data, &objectNeedUpdate);
+            id object = [strongSelf bindingBlockWithExpression:member->object](data, &objectNeedUpdate);
             if (member->computed) {
-                id propertyName = [self bindingBlockWithExpression:member->property](data, &propertyNeedUpdate);
+                id propertyName = [strongSelf bindingBlockWithExpression:member->property](data, &propertyNeedUpdate);
                 *needUpdate = objectNeedUpdate || propertyNeedUpdate;
                 if ([object isKindOfClass:[NSDictionary class]] && [propertyName isKindOfClass:[NSString class]]) {
                     return object[propertyName];
@@ -427,7 +453,7 @@ static JSContext *jsContext;
                         return object[propertyName];
                     }
                 } else {
-                    id retvalue = [self bindingBlockWithExpression:member->property](object, &objectNeedUpdate);
+                    id retvalue = [strongSelf bindingBlockWithExpression:member->property](object, &objectNeedUpdate);
                     *needUpdate = objectNeedUpdate || propertyNeedUpdate;
                     return retvalue;
                 }
@@ -442,7 +468,7 @@ static JSContext *jsContext;
                 if (expr == NULL) {
                     continue;
                 }
-                WXDataBindingBlock block = [self bindingBlockWithExpression:expr];
+                WXDataBindingBlock block = [strongSelf bindingBlockWithExpression:expr];
                 *needUpdate = NO;
                 if (block) {
                     BOOL elementNeedUpdate;
@@ -458,7 +484,7 @@ static JSContext *jsContext;
         } else if (expression->is<WXJSUnaryExpression>()) {
             WXJSUnaryExpression *expr = (WXJSUnaryExpression *)expression;
             std::string operator_ = expr->operator_;
-            id argument = [self bindingBlockWithExpression:expr->argument](data, needUpdate);
+            id argument = [strongSelf bindingBlockWithExpression:expr->argument](data, needUpdate);
             if (operator_ == "+") {
                 return @([argument doubleValue]);
             } else if (operator_ == "-") {
@@ -473,8 +499,8 @@ static JSContext *jsContext;
             WXJSBinaryExpression *expr = (WXJSBinaryExpression *)expression;
             std::string operator_ = expr->operator_;
             BOOL leftNeedUpdate = NO, rightNeedUpdate = NO;
-            id left = [self bindingBlockWithExpression:expr->left](data, &leftNeedUpdate);
-            id right = [self bindingBlockWithExpression:expr->right](data, &rightNeedUpdate);
+            id left = [strongSelf bindingBlockWithExpression:expr->left](data, &leftNeedUpdate);
+            id right = [strongSelf bindingBlockWithExpression:expr->right](data, &rightNeedUpdate);
             *needUpdate = leftNeedUpdate || rightNeedUpdate;
             if (operator_ == "+") {
                 return @([left doubleValue] + [right doubleValue]);
@@ -523,12 +549,12 @@ static JSContext *jsContext;
         } else if (expression->is<WXJSConditionalExpression>()) {
             WXJSConditionalExpression *conditional = (WXJSConditionalExpression *)expression;
             BOOL testNeedUpdate = NO, conditionalNeedUpdate = NO, alternateNeedUpdate = NO;
-            id testResult = [self bindingBlockWithExpression:conditional->test](data, &testNeedUpdate);
+            id testResult = [strongSelf bindingBlockWithExpression:conditional->test](data, &testNeedUpdate);
             id result;
             if ([testResult boolValue]) {
-                result = [self bindingBlockWithExpression:conditional->consequent](data, &conditionalNeedUpdate);
+                result = [strongSelf bindingBlockWithExpression:conditional->consequent](data, &conditionalNeedUpdate);
             } else {
-                result = [self bindingBlockWithExpression:conditional->alternate](data, &alternateNeedUpdate);
+                result = [strongSelf bindingBlockWithExpression:conditional->alternate](data, &alternateNeedUpdate);
             }
             *needUpdate = testNeedUpdate || conditionalNeedUpdate || alternateNeedUpdate;
             return result;
@@ -607,7 +633,7 @@ static JSContext *jsContext;
                 indexPath = data[key][@"indexPath"];
             }
         }
-        NSString *virtualElementInfo = [NSString stringWithFormat:@"%@@%lu",component.ref,indexPath.row];
+        NSString *virtualElementInfo = [NSString stringWithFormat:@"%@@%ld",component.ref,(long)indexPath.row];
         NSDictionary *refInfo = @{@"attrs":component.attributes,@"type":component->_type,@"ref":virtualElementInfo,@"[[VirtualElement]]":@"true"};
         if (subInfo[component.attributes[@"ref"]]) {
             [subInfo[component.attributes[@"ref"]] addObject:refInfo];

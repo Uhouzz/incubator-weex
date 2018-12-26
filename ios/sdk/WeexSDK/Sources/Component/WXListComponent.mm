@@ -22,6 +22,7 @@
 #import "WXHeaderComponent.h"
 #import "WXComponent.h"
 #import "WXComponent_internal.h"
+#import "WXComponent+Layout.h"
 #import "NSArray+Weex.h"
 #import "WXAssert.h"
 #import "WXMonitor.h"
@@ -30,8 +31,14 @@
 #import "WXSDKInstance_private.h"
 #import "WXRefreshComponent.h"
 #import "WXLoadingComponent.h"
-#import "WXScrollerComponent+Layout.h"
-#import "WXThreadSafeMutableArray.h"
+
+@interface WXListComponent () <UITableViewDataSource, UITableViewDelegate, WXCellRenderDelegate, WXHeaderRenderDelegate>
+
+@property (nonatomic, assign) NSUInteger currentTopVisibleSection;
+// Set whether the content offset position all the way to the bottom
+@property (assign, nonatomic) BOOL contentAttachBottom;
+
+@end
 
 @interface WXTableView : UITableView
 
@@ -80,6 +87,40 @@
     [super setContentOffset:contentOffset];
 }
 
+- (void)setFrame:(CGRect)frame {
+    [super setFrame:frame];
+    if (![self.wx_component isKindOfClass:[WXListComponent class]]) return;
+    BOOL contentAttachBottom = [(WXListComponent *)self.wx_component contentAttachBottom];
+    if (contentAttachBottom) {
+        CGFloat offsetHeight = self.contentSize.height - CGRectGetHeight(self.bounds);
+        if (offsetHeight >= 0) {
+            [self setContentOffset:CGPointMake(0, offsetHeight) animated:NO];
+        }
+    }
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
+{
+    [super setContentOffset:contentOffset animated:animated];
+    BOOL scrollStartEvent = [[self.wx_component valueForKey:@"_scrollStartEvent"] boolValue];
+    id scrollEventListener = [self.wx_component valueForKey:@"_scrollEventListener"];
+    
+    if (animated && (scrollStartEvent ||scrollEventListener)  && !WXPointEqualToPoint(contentOffset, self.contentOffset)) {
+        CGFloat scaleFactor = self.wx_component.weexInstance.pixelScaleFactor;
+        NSDictionary *contentSizeData = @{@"width":@(self.contentSize.width / scaleFactor),
+                                          @"height":@(self.contentSize.height / scaleFactor)};
+        NSDictionary *contentOffsetData = @{@"x":@(-self.contentOffset.x / scaleFactor),
+                                            @"y":@(-self.contentOffset.y / scaleFactor)};
+        if (scrollStartEvent) {
+            [self.wx_component fireEvent:@"scrollstart" params:@{@"contentSize":contentSizeData, @"contentOffset":contentOffsetData} domChanges:nil];
+        }
+        if (scrollEventListener) {
+            WXScrollerComponent *component = (WXScrollerComponent *)self.wx_component;
+            component.scrollEventListener(component, @"scrollstart", @{@"contentSize":contentSizeData, @"contentOffset":contentOffsetData});
+        }
+    }
+}
+
 @end
 
 // WXText is a non-public is not permitted
@@ -95,12 +136,8 @@
 - (instancetype)init
 {
     if (self = [super init]) {
-		if ([WXUtility listSectionRowThreadSafe]) {
-			_rows = [WXThreadSafeMutableArray array];
-		} else {
-			_rows = [NSMutableArray array];
-		}    }
-    
+        _rows = [NSMutableArray array];
+    }
     return self;
 }
 
@@ -117,12 +154,6 @@
 {
     return [NSString stringWithFormat:@"%@\n%@", [_header description], [_rows description]];
 }
-@end
-
-@interface WXListComponent () <UITableViewDataSource, UITableViewDelegate, WXCellRenderDelegate, WXHeaderRenderDelegate>
-
-@property (nonatomic, assign) NSUInteger currentTopVisibleSection;
-
 @end
 
 @implementation WXListComponent
@@ -149,6 +180,7 @@
         _completedSections = [NSMutableArray array];
         _reloadInterval = attributes[@"reloadInterval"] ? [WXConvert CGFloat:attributes[@"reloadInterval"]]/1000 : 0;
         _updataType = [WXConvert NSString:attributes[@"updataType"]]?:@"insert";
+        _contentAttachBottom = [WXConvert BOOL:attributes[@"contentAttachBottom"]];
         [self fixFlicker];
     }
     
@@ -203,6 +235,9 @@
     if (attributes[@"updataType"]) {
         _updataType = [WXConvert NSString:attributes[@"updataType"]];
     }
+    if (attributes[@"contentAttachBottom"]) {
+        _contentAttachBottom = [WXConvert BOOL:attributes[@"contentAttachBottom"]];
+    }
 }
 
 - (void)setContentSize:(CGSize)contentSize
@@ -252,7 +287,7 @@
 
 #pragma mark - Inheritance
 
-- (void)_insertSubcomponent:(WXComponent *)subcomponent atIndex:(NSInteger)index
+- (BOOL)_insertSubcomponent:(WXComponent *)subcomponent atIndex:(NSInteger)index
 {
     if ([subcomponent isKindOfClass:[WXCellComponent class]]) {
         ((WXCellComponent *)subcomponent).delegate = self;
@@ -262,15 +297,15 @@
                && ![subcomponent isKindOfClass:[WXLoadingComponent class]]
                && subcomponent->_positionType != WXPositionTypeFixed) {
         WXLogError(@"list only support cell/header/refresh/loading/fixed-component as child.");
-        return;
+        subcomponent->_isViewTreeIgnored = YES; // do not show this element.
     }
     
-    [super _insertSubcomponent:subcomponent atIndex:index];
+    BOOL inserted = [super _insertSubcomponent:subcomponent atIndex:index];
     
     if (![subcomponent isKindOfClass:[WXHeaderComponent class]]
         && ![subcomponent isKindOfClass:[WXCellComponent class]]) {
         // Don't insert section if subcomponent is not header or cell
-        return;
+        return inserted;
     }
     
     NSIndexPath *indexPath = [self indexPathForSubIndex:index];
@@ -340,6 +375,8 @@
         }];
         
     }
+    
+    return inserted;
 }
 
 - (void)insertSubview:(WXComponent *)subcomponent atIndex:(NSInteger)index
@@ -355,7 +392,7 @@
 
 - (float)headerWidthForLayout:(WXHeaderComponent *)cell
 {
-        return self.flexScrollerCSSNode->getStyleWidth();
+    return [self safeContainerStyleWidth];
 }
 
 - (void)headerDidLayout:(WXHeaderComponent *)header
@@ -443,7 +480,7 @@
 
 - (float)containerWidthForLayout:(WXCellComponent *)cell
 {
-        return self.flexScrollerCSSNode->getStyleWidth();
+    return [self safeContainerStyleWidth];
 }
 
 - (void)cellDidRemove:(WXCellComponent *)cell
@@ -639,7 +676,7 @@
             // Must invoke synchronously otherwise it will remove the view just added.
             WXCellComponent *cellComponent = (WXCellComponent *)wxCellView.wx_component;
             if (cellComponent.isRecycle) {
-                [wxCellView.wx_component _unloadViewWithReusing:YES];
+                [cellComponent _unloadViewWithReusing:YES];
             }
         }
     }
@@ -892,7 +929,7 @@
     
     if (keepScrollPosition) {
         CGPoint afterContentOffset = _tableView.contentOffset;
-        CGPoint newContentOffset = CGPointMake(afterContentOffset.x, afterContentOffset.y + adjustment);
+        CGPoint newContentOffset = CGPointMake(afterContentOffset.x, afterContentOffset.y + ceilf(adjustment));
         _tableView.contentOffset = newContentOffset;
     }
     
@@ -902,7 +939,12 @@
 - (void)_insertTableViewSectionAtIndex:(NSUInteger)section keepScrollPosition:(BOOL)keepScrollPosition animation:(UITableViewRowAnimation)animation
 {
     [self _performUpdates:^{
-        [_tableView insertSections:[NSIndexSet indexSetWithIndex:section] withRowAnimation:animation];
+        // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
+        @try {
+            [_tableView insertSections:[NSIndexSet indexSetWithIndex:section] withRowAnimation:animation];
+        } @catch(NSException *) {
+            
+        }
     } withKeepScrollPosition:keepScrollPosition adjustmentBlock:^CGFloat(NSIndexPath *top) {
         if (section <= top.section) {
             return [self tableView:_tableView heightForHeaderInSection:section];
@@ -915,7 +957,13 @@
 - (void)_deleteTableViewSectionAtIndex:(NSUInteger)section keepScrollPosition:(BOOL)keepScrollPosition animation:(UITableViewRowAnimation)animation
 {
     [self _performUpdates:^{
-        [_tableView deleteSections:[NSIndexSet indexSetWithIndex:section] withRowAnimation:animation];
+        // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
+        @try {
+            [_tableView deleteSections:[NSIndexSet indexSetWithIndex:section] withRowAnimation:animation];
+        } @catch(NSException *) {
+            
+        }
+
     } withKeepScrollPosition:keepScrollPosition adjustmentBlock:^CGFloat(NSIndexPath *top) {
         if (section <= top.section) {
             return [self tableView:_tableView heightForHeaderInSection:section];
@@ -931,7 +979,12 @@
         if ([_updataType  isEqual: @"reload"]) {
             [_tableView reloadData];
         } else {
-            [_tableView insertRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:animation];
+            // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
+            @try {
+                [_tableView insertRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:animation];
+            } @catch(NSException *e) {
+                
+            }
         }
     } withKeepScrollPosition:keepScrollPosition adjustmentBlock:^CGFloat(NSIndexPath *top) {
         if (([indexPath compare:top] <= 0) || [_updataType  isEqual: @"reload"]) {
@@ -948,7 +1001,12 @@
         return ;
     }
     [self _performUpdates:^{
-        [_tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:animation];
+        // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
+        @try {
+            [_tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:animation];
+        } @catch (NSException* e) {
+            
+        }
     } withKeepScrollPosition:keepScrollPosition adjustmentBlock:^CGFloat(NSIndexPath *top) {
         if ([indexPath compare:top] <= 0) {
             return [self tableView:_tableView heightForRowAtIndexPath:indexPath];

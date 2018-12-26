@@ -67,6 +67,7 @@ export default class CallbackManager {
     }
     catch (e) {
       console.error(`[JS Framework] Failed to execute the hook function on "${key}".`)
+      throw e
     }
     return result
   }
@@ -78,8 +79,10 @@ export default class CallbackManager {
     if (typeof callback === 'function') {
       try {
         return callback.call(null, data)
-      } catch (error) {
-        console.error(`[JS Framework] Failed to execute the callback function:\n + ${error.toString()}`)
+      }
+      catch (error) {
+        console.error(`[JS Framework] Failed to execute the callback function:\n ${error.toString()}`)
+        throw error
       }
     }
     return new Error(`invalid callback id "${callbackId}"`)
