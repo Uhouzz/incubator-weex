@@ -497,38 +497,21 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
     noSpace.width=10;
     
     UIBarButtonItem* doneBtn ;
-    if (self.confirmTitle.length >0) {
-        doneBtn = [[UIBarButtonItem alloc] initWithTitle:self.confirmTitle style:UIBarButtonItemStylePlain target:self action:@selector(doneDatePicker:)];
+    if (done.length >0) {
+        doneBtn = [[UIBarButtonItem alloc] initWithTitle:done style:UIBarButtonItemStylePlain target:self action:@selector(doneDatePicker:)];
     }else {
         doneBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneDatePicker:)];
     }
-    if(self.confirmTitleColor){
-        doneBtn.tintColor = self.confirmTitleColor;
-    }
+    
     UIBarButtonItem *cancelBtn;
-    if (self.cancelTitle.length >0) {
-        cancelBtn = [[UIBarButtonItem alloc] initWithTitle:self.cancelTitle style:UIBarButtonItemStylePlain target:self action:@selector(cancelDatePicker:)];
+    if (cancel.length >0) {
+        cancelBtn = [[UIBarButtonItem alloc] initWithTitle:cancel style:UIBarButtonItemStylePlain target:self action:@selector(cancelDatePicker:)];
     }else {
         cancelBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancelDatePicker:)];
     }
-    if(self.cancelTitleColor){
-        cancelBtn.tintColor = self.cancelTitleColor;
-    }
     UIBarButtonItem* flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     [toolBar setItems:[NSArray arrayWithObjects:noSpace,cancelBtn,flexSpace,doneBtn,noSpace, nil]];
-    UILabel *titleLabel = [UILabel new];
-    titleLabel.frame = CGRectMake(0, 0, 200, WXPickerToolBarHeight);
-    titleLabel.center = toolBar.center;
-    titleLabel.textAlignment = NSTextAlignmentCenter;
-    if(self.titleColor){
-        titleLabel.textColor = self.titleColor;
-    }
-    if(self.title.length>0){
-        titleLabel.text = self.title;
-        [toolBar addSubview:titleLabel];
-    }
     [self.pickerView addSubview:toolBar];
-    
     
     CGRect pickerFrame = CGRectMake(0, WXPickerToolBarHeight, [UIScreen mainScreen].bounds.size.width, WXPickerHeight-WXPickerToolBarHeight);
     self.datePicker.frame = pickerFrame;
