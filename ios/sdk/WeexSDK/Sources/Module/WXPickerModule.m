@@ -468,11 +468,20 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
             }
         }
     }
-    [self configDatePickerView];
+    NSString  *confirmTitle;
+    NSString  *cancelTitle;
+    if (options[@"confirmTitle"]) {
+        confirmTitle = [WXConvert NSString:options[@"confirmTitle"]];
+    }
+    if (options[@"cancelTitle"]) {
+        cancelTitle = [WXConvert NSString:options[@"cancelTitle"]];
+    }
+    
+    [self configDatePickerViewWithConfirmTitle:confirmTitle cancelTitle:cancelTitle];
     [self show];
 }
 
--(void)configDatePickerView
+-(void)configDatePickerViewWithConfirmTitle:(NSString *)done cancelTitle:(NSString *)cancel
 {
     self.backgroundView = [self createbackgroundView];
     UITapGestureRecognizer *tapGesture=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(hide)];
@@ -483,13 +492,44 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
     self.pickerView = [self createPickerView];
     UIToolbar *toolBar=[[UIToolbar alloc]initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, WXPickerToolBarHeight)];
     [toolBar setBackgroundColor:[UIColor whiteColor]];
+    
     UIBarButtonItem* noSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
     noSpace.width=10;
-    UIBarButtonItem* doneBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneDatePicker:)];
-    UIBarButtonItem *flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-    UIBarButtonItem* cancelBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancelDatePicker:)];
+    
+    UIBarButtonItem* doneBtn ;
+    if (self.confirmTitle.length >0) {
+        doneBtn = [[UIBarButtonItem alloc] initWithTitle:self.confirmTitle style:UIBarButtonItemStylePlain target:self action:@selector(doneDatePicker:)];
+    }else {
+        doneBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneDatePicker:)];
+    }
+    if(self.confirmTitleColor){
+        doneBtn.tintColor = self.confirmTitleColor;
+    }
+    UIBarButtonItem *cancelBtn;
+    if (self.cancelTitle.length >0) {
+        cancelBtn = [[UIBarButtonItem alloc] initWithTitle:self.cancelTitle style:UIBarButtonItemStylePlain target:self action:@selector(cancelDatePicker:)];
+    }else {
+        cancelBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancelDatePicker:)];
+    }
+    if(self.cancelTitleColor){
+        cancelBtn.tintColor = self.cancelTitleColor;
+    }
+    UIBarButtonItem* flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     [toolBar setItems:[NSArray arrayWithObjects:noSpace,cancelBtn,flexSpace,doneBtn,noSpace, nil]];
+    UILabel *titleLabel = [UILabel new];
+    titleLabel.frame = CGRectMake(0, 0, 200, WXPickerToolBarHeight);
+    titleLabel.center = toolBar.center;
+    titleLabel.textAlignment = NSTextAlignmentCenter;
+    if(self.titleColor){
+        titleLabel.textColor = self.titleColor;
+    }
+    if(self.title.length>0){
+        titleLabel.text = self.title;
+        [toolBar addSubview:titleLabel];
+    }
     [self.pickerView addSubview:toolBar];
+    
+    
     CGRect pickerFrame = CGRectMake(0, WXPickerToolBarHeight, [UIScreen mainScreen].bounds.size.width, WXPickerHeight-WXPickerToolBarHeight);
     self.datePicker.frame = pickerFrame;
     self.datePicker.backgroundColor = [UIColor whiteColor];
