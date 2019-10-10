@@ -497,10 +497,8 @@ do {\
     
     // set font
     UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:_fontStyle fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
-    CTFontRef ctFont = CTFontCreateWithName((__bridge CFStringRef)font.fontName,
-                                           font.pointSize,
-                                           NULL);
-    
+    CTFontRef ctFont = CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)font.fontDescriptor, font.pointSize, NULL);
+
     _fontAscender = font.ascender;
     _fontDescender = font.descender;
     
@@ -902,7 +900,7 @@ do {\
         CGFloat fontSize = font ? CTFontGetSize(font):32 * self.weexInstance.pixelScaleFactor;
         UIFont * uiFont = [UIFont systemFontOfSize:fontSize];
         if (uiFont) {
-            font = CTFontCreateWithName((__bridge CFStringRef)uiFont.fontName, uiFont.pointSize, NULL);
+            font = CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)uiFont.fontDescriptor, uiFont.pointSize, NULL);
         }
         if (font) {
             attrs[(id)kCTFontAttributeName] = (__bridge id)(font);
