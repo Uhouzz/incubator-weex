@@ -31,11 +31,11 @@
 
 @interface WXConsoleLogHandler : NSObject<WXLogProtocol>
 
-@property (nonatomic, assign) WXLogLevel logLevel;
+@property (nonatomic, assign) WEEXLogLevel logLevel;
 
 + (WXConsoleLogHandler *)sharedInstance;
 
-- (WXLogLevel)logLevel;
+- (WEEXLogLevel)logLevel;
 
 - (void)log:(WXLogFlag)flag message:(NSString *)message;
 
@@ -56,12 +56,12 @@
 - (instancetype)init
 {
     if (self = [super init]) {
-        _logLevel = WXLogLevelAll;
+        _logLevel = WEEXLogLevelAll;
     }
     return self;
 }
 
-- (WXLogLevel)logLevel
+- (WEEXLogLevel)logLevel
 {
     return _logLevel;
 }
@@ -97,22 +97,22 @@ WX_EXPORT_METHOD(@selector(switchLogLevel:callback:))
     }
     else if ([logLevel isEqualToString:@"error"]) {
         weex::base::LogImplement::getLog()->setPrintLevel(WeexCore::LogLevel::Error);
-        [WXConsoleLogHandler sharedInstance].logLevel = WXLogLevelError;
+        [WXConsoleLogHandler sharedInstance].logLevel = WEEXLogLevelError;
         [WXLog registerExternalLog:[WXConsoleLogHandler sharedInstance]];
     }
     else if ([logLevel isEqualToString:@"warning"]) {
         weex::base::LogImplement::getLog()->setPrintLevel(WeexCore::LogLevel::Warn);
-        [WXConsoleLogHandler sharedInstance].logLevel = WXLogLevelWarning;
+        [WXConsoleLogHandler sharedInstance].logLevel = WEEXLogLevelWarning;
         [WXLog registerExternalLog:[WXConsoleLogHandler sharedInstance]];
     }
     else if ([logLevel isEqualToString:@"info"]) {
         weex::base::LogImplement::getLog()->setPrintLevel(WeexCore::LogLevel::Info);
-        [WXConsoleLogHandler sharedInstance].logLevel = WXLogLevelInfo;
+        [WXConsoleLogHandler sharedInstance].logLevel = WEEXLogLevelInfo;
         [WXLog registerExternalLog:[WXConsoleLogHandler sharedInstance]];
     }
     else if ([logLevel isEqualToString:@"debug"]) {
         weex::base::LogImplement::getLog()->setPrintLevel(WeexCore::LogLevel::Debug);
-        [WXConsoleLogHandler sharedInstance].logLevel = WXLogLevelDebug;
+        [WXConsoleLogHandler sharedInstance].logLevel = WEEXLogLevelDebug;
         [WXLog registerExternalLog:[WXConsoleLogHandler sharedInstance]];
     }
     
