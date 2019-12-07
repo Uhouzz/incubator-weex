@@ -252,6 +252,13 @@
 
 - (void)scrollToComponent:(WXComponent *)component withOffset:(CGFloat)offset animated:(BOOL)animated
 {
+    UIScrollView *scrollView = (UIScrollView *)self.view;
+    // http://dotwe.org/vue/aa1af34e5fc745c0f1520e346904682a
+    // ignore scroll action if contentSize smaller than scroller frame
+    if (scrollView.contentSize.height < scrollView.frame.size.height) {
+        return;
+    }
+    
     CGPoint contentOffset = _tableView.contentOffset;
     CGFloat contentOffsetY = 0;
     
@@ -327,13 +334,40 @@
             && [subcomponent isKindOfClass:[WXHeaderComponent class]]) {
             // insert a header in the middle, one section may divide into two
             // so the original section need to be reloaded
-            NSIndexPath *indexPathBeforeHeader = [self indexPathForSubIndex:index - 1];
-            if (_sections[insertIndex - 1].rows.count != 0 && indexPathBeforeHeader.row < _sections[insertIndex - 1].rows.count - 1) {
-                reloadSection = _sections[insertIndex - 1];
-                NSArray *rowsToSeparate = reloadSection.rows;
-                insertSection.rows = [[rowsToSeparate subarrayWithRange:NSMakeRange(indexPathBeforeHeader.row + 1, rowsToSeparate.count - indexPathBeforeHeader.row - 1)] mutableCopy];
-                reloadSection.rows = [[rowsToSeparate subarrayWithRange:NSMakeRange(0, indexPathBeforeHeader.row + 1)]  mutableCopy];
+            
+            /*
+             Here we may encounter a problem that _sections is not always containing all cells of list.
+             Because cell are not added to _sections until cellDidLayout. So if a cell is not added to _sections,
+             
+                NSIndexPath *indexPathBeforeHeader = [self indexPathForSubIndex:index - 1];
+             The indexPathForSubIndex method use all sub components of list to calculate row in section. This would
+             be incorrect if a cell is not added to _sections. And the split is incorrect resulting some cells put to
+             wrong WXSectionComponent and then UITableView crash.
+             
+             In fixed version, we use _subcomponents[index - 1] to get the last component that should be put to original section
+             and get the index of it in section rows.
+             */
+            
+            if (_sections[insertIndex - 1].rows.count > 0) {
+                WXComponent* componentBeforeHeader = _subcomponents[index - 1];
+                
+                NSArray *rowsToSeparate = _sections[insertIndex - 1].rows;
+                NSUInteger indexOfLastComponentAfterSeparate = [rowsToSeparate indexOfObject:componentBeforeHeader];
+                if (indexOfLastComponentAfterSeparate != NSNotFound && componentBeforeHeader != [rowsToSeparate lastObject]) {
+                    reloadSection = _sections[insertIndex - 1];
+                    insertSection.rows = [[rowsToSeparate subarrayWithRange:NSMakeRange(indexOfLastComponentAfterSeparate + 1, rowsToSeparate.count - (indexOfLastComponentAfterSeparate + 1))] mutableCopy];
+                    reloadSection.rows = [[rowsToSeparate subarrayWithRange:NSMakeRange(0, indexOfLastComponentAfterSeparate + 1)]  mutableCopy];
+                }
             }
+            
+//          This is wrong!!!
+//            NSIndexPath *indexPathBeforeHeader = [self indexPathForSubIndex:index - 1];
+//            if (_sections[insertIndex - 1].rows.count != 0 && indexPathBeforeHeader.row < _sections[insertIndex - 1].rows.count - 1) {
+//                reloadSection = _sections[insertIndex - 1];
+//                NSArray *rowsToSeparate = reloadSection.rows;
+//                insertSection.rows = [[rowsToSeparate subarrayWithRange:NSMakeRange(indexPathBeforeHeader.row + 1, rowsToSeparate.count - indexPathBeforeHeader.row - 1)] mutableCopy];
+//                reloadSection.rows = [[rowsToSeparate subarrayWithRange:NSMakeRange(0, indexPathBeforeHeader.row + 1)]  mutableCopy];
+//            }
         }
     
         [_sections insertObject:insertSection atIndex:insertIndex];
@@ -366,8 +400,6 @@
                     [_tableView endUpdates];
                 } @catch (NSException *exception) {
                     WXLogError(@"list insert component occurs exception %@", exception);
-                } @finally {
-                     // nothing
                 }
                 
             }];
@@ -622,8 +654,6 @@
                     [_tableView endUpdates];
                 }@catch(NSException * exception){
                     WXLogDebug(@"move cell exception: %@", [exception description]);
-                }@finally {
-                    // do nothing
                 }
             }];
         }
@@ -942,7 +972,7 @@
         // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
         @try {
             [_tableView insertSections:[NSIndexSet indexSetWithIndex:section] withRowAnimation:animation];
-        } @catch(NSException *) {
+        } @catch(NSException *) {//!OCLint
             
         }
     } withKeepScrollPosition:keepScrollPosition adjustmentBlock:^CGFloat(NSIndexPath *top) {
@@ -960,7 +990,7 @@
         // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
         @try {
             [_tableView deleteSections:[NSIndexSet indexSetWithIndex:section] withRowAnimation:animation];
-        } @catch(NSException *) {
+        } @catch(NSException *) {//!OCLint
             
         }
 
@@ -982,7 +1012,7 @@
             // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
             @try {
                 [_tableView insertRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:animation];
-            } @catch(NSException *e) {
+            } @catch(NSException *e) {//!OCLint
                 
             }
         }
@@ -1004,7 +1034,7 @@
         // catch system exception under 11.2 https://forums.developer.apple.com/thread/49676
         @try {
             [_tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:animation];
-        } @catch (NSException* e) {
+        } @catch (NSException* e) {//!OCLint
             
         }
     } withKeepScrollPosition:keepScrollPosition adjustmentBlock:^CGFloat(NSIndexPath *top) {
@@ -1016,6 +1046,7 @@
     }];
 }
 
+// Hook _adjustContentOffsetIfNecessary will cause UITableView freezing if bounces is set to NO.
 - (void)fixFlicker
 {
     static dispatch_once_t onceToken;

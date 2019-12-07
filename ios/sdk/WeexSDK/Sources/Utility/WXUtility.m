@@ -42,8 +42,6 @@
 #define KEY_PASSWORD  @"com.taobao.Weex.123456"
 #define KEY_USERNAME_PASSWORD  @"com.taobao.Weex.weex123456"
 
-static BOOL unregisterFontWhenCollision = NO;
-static BOOL useJSCApiForCreateInstance = YES;
 static BOOL enableRTLLayoutDirection = YES;
 
 void WXPerformBlockOnMainThread(void (^ _Nonnull block)(void))
@@ -140,21 +138,6 @@ CGFloat WXFloorPixelValue(CGFloat value)
 
 @implementation WXUtility
 
-+ (void)setUnregisterFontWhenCollision:(BOOL)value
-{
-    unregisterFontWhenCollision = value;
-}
-
-+ (void)setUseJSCApiForCreateInstance:(BOOL)value
-{
-    useJSCApiForCreateInstance = value;
-}
-
-+ (BOOL)useJSCApiForCreateInstance
-{
-    return useJSCApiForCreateInstance;
-}
-
 + (void)performBlock:(void (^)(void))block onThread:(NSThread *)thread
 {
     if (!thread || !block) return;
@@ -177,13 +160,7 @@ CGFloat WXFloorPixelValue(CGFloat value)
 + (WXLayoutDirection)getEnvLayoutDirection {
     // We not use the below technique, because your app maybe not support the first preferredLanguages
     // _sysLayoutDirection = [NSLocale characterDirectionForLanguage:[[NSLocale preferredLanguages] objectAtIndex:0]] == NSLocaleLanguageDirectionRightToLeft ? WXLayoutDirectionRTL : WXLayoutDirectionLTR;
-    if (@available(iOS 9.0, *)) {
-        // The view is shown in right-to-left mode right now.
-        return [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:UISemanticContentAttributeUnspecified] == UIUserInterfaceLayoutDirectionRightToLeft ? WXLayoutDirectionRTL : WXLayoutDirectionLTR;
-    } else {
-        // Use the previous technique
-        return [[UIApplication sharedApplication] userInterfaceLayoutDirection] == UIUserInterfaceLayoutDirectionRightToLeft ? WXLayoutDirectionRTL : WXLayoutDirectionLTR;
-    }
+    return [UIView userInterfaceLayoutDirectionForSemanticContentAttribute:UISemanticContentAttributeUnspecified] == UIUserInterfaceLayoutDirectionRightToLeft ? WXLayoutDirectionRTL : WXLayoutDirectionLTR;
 }
 
 + (NSDictionary *)getEnvironment
@@ -210,7 +187,6 @@ CGFloat WXFloorPixelValue(CGFloat value)
                                     @"deviceWidth":@(deviceWidth * scale),
                                     @"deviceHeight":@(deviceHeight * scale),
                                     @"scale":@(scale),
-                                    @"logLevel":[WXLog logLevelString] ?: @"error",
                                     @"layoutDirection": [self getEnvLayoutDirection] == WXLayoutDirectionRTL ? @"rtl" : @"ltr"
                                 }];
     
@@ -281,6 +257,38 @@ CGFloat WXFloorPixelValue(CGFloat value)
     if ([json isEqualToString:@"{}"]) return @{}.mutableCopy;
     if ([json isEqualToString:@"[]"]) return @[].mutableCopy;
     return [self JSONObject:[json dataUsingEncoding:NSUTF8StringEncoding] error:nil];
+}
+
++ (id _Nullable)convertContainerToImmutable:(id _Nullable)source
+{
+    if (source == nil) {
+        return nil;
+    }
+    
+    if ([source isKindOfClass:[NSArray class]]) {
+        NSMutableArray* tmpArray = [[NSMutableArray alloc] init];
+        for (id obj in source) {
+            if (obj == nil) {
+                /* srouce may be a subclass of NSArray and the subclassed
+                 array may return nil in its overridden objectAtIndex: method.
+                 So obj could be nil!!!. */
+                continue;
+            }
+            [tmpArray addObject:[self convertContainerToImmutable:obj]];
+        }
+        id immutableArray = [NSArray arrayWithArray:tmpArray];
+        return immutableArray ? immutableArray : tmpArray;
+    }
+    else if ([source isKindOfClass:[NSDictionary class]]) {
+        NSMutableDictionary* tmpDictionary = [[NSMutableDictionary alloc] init];
+        for (id key in [source keyEnumerator]) {
+            tmpDictionary[key] = [self convertContainerToImmutable:[source objectForKey:key]];
+        }
+        id immutableDict = [NSDictionary dictionaryWithDictionary:tmpDictionary];
+        return immutableDict ? immutableDict : tmpDictionary;
+    }
+    
+    return source;
 }
 
 + (id)JSONObject:(NSData*)data error:(NSError **)error
@@ -389,7 +397,7 @@ CGFloat WXFloorPixelValue(CGFloat value)
 
 + (BOOL)isValidPoint:(CGPoint)point
 {
-    return !(isnan(point.x)) && !(isnan(point.y));
+    return !(isnan(point.x)) && !(isnan(point.y)); //!OCLint
 }
 
 + (NSError *)errorWithCode:(NSInteger)code message:(NSString *)message
@@ -510,7 +518,13 @@ CGFloat WXFloorPixelValue(CGFloat value)
 
 + (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily scaleFactor:(CGFloat)scaleFactor useCoreText:(BOOL)useCoreText
 {
-    CGFloat fontSize = (isnan(size) || size == 0) ?  32 * scaleFactor : size;
+    static NSMutableDictionary* RegisteredFontFileNames;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        RegisteredFontFileNames = [[NSMutableDictionary alloc] init];
+    });
+    
+    CGFloat fontSize = (isnan(size) || size == 0) ?  32 * scaleFactor : size; //!OCLint
     UIFont *font = nil;
     
     WXThreadSafeMutableDictionary *fontFace = [[WXRuleManager sharedInstance] getRule:@"fontFace"];
@@ -525,37 +539,56 @@ CGFloat WXFloorPixelValue(CGFloat value)
                     CGDataProviderRef fontDataProvider = CGDataProviderCreateWithURL(fontURL);
                     if (fontDataProvider) {
                         CGFontRef newFont = CGFontCreateWithDataProvider(fontDataProvider);
-                        if (unregisterFontWhenCollision) {
-                            CFErrorRef error = nil;
+                        if (newFont) {
+                            fontFamily = (__bridge_transfer NSString*)CGFontCopyPostScriptName(newFont);
+                            CFErrorRef error = NULL;
                             CTFontManagerRegisterGraphicsFont(newFont, &error);
-                            // the same font family, remove it and register new one.
-                            if (error) {
-                                CTFontManagerUnregisterGraphicsFont(newFont, NULL);
-                                CTFontManagerRegisterGraphicsFont(newFont, NULL);
-                                CFRelease(error);
+                            
+                            if (error == NULL) {
+                                // record which file is registered to this family name
+                                @synchronized (RegisteredFontFileNames) {
+                                    RegisteredFontFileNames[fontFamily] = fpath;
+                                }
                             }
+                            
+                            if ([fontFamily isEqualToString:@"iconfont"]) {
+                                WXLogError(@"Using iconfont with family name 'iconfont' is prohibited.");
+                                if (error) {
+                                    WXLogError(@"Unable to register font, %@.", fontFamilyDic);
+                                    CFRelease(error);
+                                }
+                            }
+                            else {
+                                // Check if we have already registered another font file with the same family-name
+                                if (error) {
+                                    @synchronized (RegisteredFontFileNames) {
+                                        NSString* previousFilePath = RegisteredFontFileNames[fontFamily];
+                                        if (![previousFilePath isEqualToString:fpath]) {
+                                            // file path changed means a new iconfont file is registered with the same name, we use it
+                                            WXLogError(@"Unable to register font, but will unregister previous one and retry with new font file, %@.", fontFamilyDic);
+                                            CTFontManagerUnregisterGraphicsFont(newFont, NULL);
+                                            CFErrorRef error2 = NULL;
+                                            CTFontManagerRegisterGraphicsFont(newFont, &error2);
+                                            if (error2) {
+                                                WXLogError(@"We cannot register the font finally. %@", error2);
+                                                CFRelease(error2);
+                                            }
+                                            else {
+                                                RegisteredFontFileNames[fontFamily] = fpath;
+                                            }
+                                        }
+                                    }
+                                    CFRelease(error);
+                                }
+                            }
+                            
+                            CGFontRelease(newFont);
+                            CFRelease(fontURL);
+                            CFRelease(fontDataProvider);
                         }
-                        else {
-                            CTFontManagerRegisterGraphicsFont(newFont, NULL);
-                        }
-                        fontFamily = (__bridge_transfer  NSString*)CGFontCopyPostScriptName(newFont);
-                        CGFontRelease(newFont);
-                        CFRelease(fontURL);
-                        CFRelease(fontDataProvider);
                     }
                 } else {
-                    if (unregisterFontWhenCollision) {
-                        CFErrorRef error = nil;
-                        CTFontManagerRegisterFontsForURL(fontURL, kCTFontManagerScopeProcess, &error);
-                        if (error) {
-                            CTFontManagerUnregisterFontsForURL(fontURL, kCTFontManagerScopeProcess, NULL);
-                            CTFontManagerRegisterFontsForURL(fontURL, kCTFontManagerScopeProcess, NULL);
-                            CFRelease(error);
-                        }
-                    }
-                    else {
-                        CTFontManagerRegisterFontsForURL(fontURL, kCTFontManagerScopeProcess, NULL);
-                    }
+                    CTFontManagerRegisterFontsForURL(fontURL, kCTFontManagerScopeProcess, NULL);
                     NSArray *descriptors = (__bridge_transfer NSArray *)CTFontManagerCreateFontDescriptorsFromURL(fontURL);
                     // length of descriptors here will be only one.
                     for (UIFontDescriptor *desc in descriptors) {
@@ -576,24 +609,21 @@ CGFloat WXFloorPixelValue(CGFloat value)
             if (fontFamily) {
                 WXLogWarning(@"Unknown fontFamily:%@", fontFamily);
             }
-            if(WX_SYS_VERSION_LESS_THAN(@"8.2")) {
-                font = [UIFont systemFontOfSize:fontSize];
-            } else {
-                font = [UIFont systemFontOfSize:fontSize weight:textWeight];
-            }
+            font = [UIFont systemFontOfSize:fontSize weight:textWeight];
         }
     }
     UIFontDescriptor *fontD = font.fontDescriptor;
     UIFontDescriptorSymbolicTraits traits = 0;
     
-    traits = (textStyle == WXTextStyleItalic) ? (traits | UIFontDescriptorTraitItalic) : traits;
-    if (WX_SYS_VERSION_LESS_THAN(@"8.2")) {
-        traits = ((textWeight-0.4) >= 0.0) ? (traits | UIFontDescriptorTraitBold) : traits;
-    }else {
-        traits = (textWeight-UIFontWeightBold >= 0.0) ? (traits | UIFontDescriptorTraitBold) : traits;
-    }
-    if (traits != 0) {
-        fontD = [fontD fontDescriptorWithSymbolicTraits:traits];
+    traits = (textWeight-UIFontWeightBold >= 0.0) ? (traits | UIFontDescriptorTraitBold) : traits;
+    if (textStyle == WXTextStyleItalic || traits != 0) {
+        if (traits != 0) {
+            fontD = [fontD fontDescriptorWithSymbolicTraits:traits];
+        }
+        if (textStyle == WXTextStyleItalic) {
+            CGAffineTransform matrix = CGAffineTransformMake(1, 0, tanf(16 * (CGFloat)M_PI / 180), 1, 0, 0);
+            fontD = [fontD fontDescriptorWithMatrix:matrix];
+        }
         UIFont *tempFont = [UIFont fontWithDescriptor:fontD size:0];
         if (tempFont) {
             font = tempFont;
@@ -812,7 +842,6 @@ CGFloat WXFloorPixelValue(CGFloat value)
             ret = [NSKeyedUnarchiver unarchiveObjectWithData:(__bridge NSData *)keyData];
         } @catch (NSException *e) {
             NSLog(@"Unarchive of %@ failed: %@", service, e);
-        } @finally {
         }
     }
     if (keyData)
@@ -1026,63 +1055,58 @@ BOOL WXFloatGreaterThanWithPrecision(CGFloat a, CGFloat b ,double precision){
     
     NSMutableArray* allKeys = nil;
     
-    if ([self useJSCApiForCreateInstance]) {
-        JSContextRef contextRef = jsvalue.context.JSGlobalContextRef;
-        if (![jsvalue isObject]) {
-            WXAssert(NO, @"Invalid jsvalue for property enumeration.");
-            return nil;
-        }
-        JSValueRef jsException = NULL;
-        JSObjectRef instanceContextObjectRef = JSValueToObject(contextRef, jsvalue.JSValueRef, &jsException);
-        if (jsException != NULL) {
-            WXLogError(@"JSValueToObject Exception during create instance.");
-        }
-        BOOL somethingWrong = NO;
-        if (instanceContextObjectRef != NULL) {
-            JSPropertyNameArrayRef allKeyRefs = JSObjectCopyPropertyNames(contextRef, instanceContextObjectRef);
-            size_t keyCount = JSPropertyNameArrayGetCount(allKeyRefs);
-            
-            allKeys = [[NSMutableArray alloc] initWithCapacity:keyCount];
-            for (size_t i = 0; i < keyCount; i ++) {
-                JSStringRef nameRef = JSPropertyNameArrayGetNameAtIndex(allKeyRefs, i);
-                size_t len = JSStringGetMaximumUTF8CStringSize(nameRef);
-                if (len > 1024) {
-                    somethingWrong = YES;
-                    break;
-                }
-                char* buf = (char*)malloc(len + 5);
-                if (buf == NULL) {
-                    somethingWrong = YES;
-                    break;
-                }
-                bzero(buf, len + 5);
-                if (JSStringGetUTF8CString(nameRef, buf, len + 5) > 0) {
-                    NSString* keyString = [NSString stringWithUTF8String:buf];
-                    if ([keyString length] == 0) {
-                        somethingWrong = YES;
-                        free(buf);
-                        break;
-                    }
-                    [allKeys addObject:keyString];
-                }
-                else {
+    JSContextRef contextRef = jsvalue.context.JSGlobalContextRef;
+    if (![jsvalue isObject]) {
+        WXAssert(NO, @"Invalid jsvalue for property enumeration.");
+        return nil;
+    }
+    JSValueRef jsException = NULL;
+    JSObjectRef instanceContextObjectRef = JSValueToObject(contextRef, jsvalue.JSValueRef, &jsException);
+    if (jsException != NULL) {
+        WXLogError(@"JSValueToObject Exception during create instance.");
+    }
+    BOOL somethingWrong = NO;
+    if (instanceContextObjectRef != NULL) {
+        JSPropertyNameArrayRef allKeyRefs = JSObjectCopyPropertyNames(contextRef, instanceContextObjectRef);
+        size_t keyCount = JSPropertyNameArrayGetCount(allKeyRefs);
+        
+        allKeys = [[NSMutableArray alloc] initWithCapacity:keyCount];
+        for (size_t i = 0; i < keyCount; i ++) {
+            JSStringRef nameRef = JSPropertyNameArrayGetNameAtIndex(allKeyRefs, i);
+            size_t len = JSStringGetMaximumUTF8CStringSize(nameRef);
+            if (len > 1024) {
+                somethingWrong = YES;
+                break;
+            }
+            char* buf = (char*)malloc(len + 5);
+            if (buf == NULL) {
+                somethingWrong = YES;
+                break;
+            }
+            bzero(buf, len + 5);
+            if (JSStringGetUTF8CString(nameRef, buf, len + 5) > 0) {
+                NSString* keyString = [NSString stringWithUTF8String:buf];
+                if ([keyString length] == 0) {
                     somethingWrong = YES;
                     free(buf);
                     break;
                 }
-                free(buf);
+                [allKeys addObject:keyString];
             }
-            JSPropertyNameArrayRelease(allKeyRefs);
-        } else {
-            somethingWrong = YES;
+            else {
+                somethingWrong = YES;
+                free(buf);
+                break;
+            }
+            free(buf);
         }
-        
-        if (somethingWrong) {
-            // may contain retain-cycle.
-            allKeys = (NSMutableArray*)[[jsvalue toDictionary] allKeys];
-        }
+        JSPropertyNameArrayRelease(allKeyRefs);
+    } else {
+        somethingWrong = YES;
     }
-    else {
+    
+    if (somethingWrong) {
+        // may contain retain-cycle.
         allKeys = (NSMutableArray*)[[jsvalue toDictionary] allKeys];
     }
     

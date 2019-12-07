@@ -23,7 +23,7 @@
 #include <memory>
 #include "base/common.h"
 #include "include/WeexApiHeader.h"
-#include "base/LogDefines.h"
+#include "base/log_defines.h"
 
 namespace WeexCore {
 class ScriptBridge {
@@ -84,9 +84,16 @@ class ScriptBridge {
     virtual void SetJSVersion(const char *js_version) = 0;
     virtual void OnReceivedResult(long callback_id,
                                   std::unique_ptr<WeexJSResult> &result) = 0;
+
     virtual void UpdateComponentData(const char* page_id,
                                      const char* cid,
                                      const char* json_data) = 0;
+
+
+    virtual bool Log(int level, const char *tag,
+                     const char *file,
+                     unsigned long line,
+                     const char *log) = 0;
 
     inline ScriptBridge *bridge() { return bridge_; }
 
@@ -143,13 +150,19 @@ class ScriptBridge {
                                const char *extendsApi, std::vector<INIT_FRAMEWORK_PARAMS*>& params) = 0;
 
     virtual std::unique_ptr<WeexJSResult>  ExecJSOnInstance(const char *instanceId,
-                                   const char *script) = 0;
+                                   const char *script,int type) = 0;
 
     virtual int DestroyInstance(const char *instanceId) = 0;
 
     virtual int UpdateGlobalConfig(const char *config) = 0;
 
+    virtual int UpdateInitFrameworkParams(const std::string& key, const std::string& value, const std::string& desc) = 0;
+
+    virtual void SetLogType(const int logLevel, const bool isPerf) = 0;
+
     inline ScriptBridge *bridge() { return bridge_; }
+
+
 
    private:
     ScriptBridge *bridge_;
@@ -162,7 +175,6 @@ class ScriptBridge {
   inline ScriptSide *script_side() { return script_side_.get(); }
 
   inline void set_core_side(CoreSide *core_side) {
-    LOGE("xxx set_core_side is runing and %p", core_side);
     core_side_.reset(core_side);
     core_side_->set_bridge(this);
   }

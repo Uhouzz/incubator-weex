@@ -115,10 +115,8 @@
 
 @end
 
-static BOOL textRenderUsingCoreText = YES;
-
-NSString *const WXTextTruncationToken = @"\u2026";
-CGFloat WXTextDefaultLineThroughWidth = 1.2;
+static NSString *const WXTextTruncationToken = @"\u2026";
+static CGFloat WXTextDefaultLineThroughWidth = 1.2;
 
 @interface WXTextComponent()
 @property (nonatomic, strong) NSString *useCoreTextAttr;
@@ -129,21 +127,20 @@ CGFloat WXTextDefaultLineThroughWidth = 1.2;
     UIEdgeInsets _border;
     UIEdgeInsets _padding;
     NSTextStorage *_textStorage;
-    CGFloat _textStorageWidth;
-    
-    UIColor *_color;
+    float _textStorageWidth;
+    float _color[4];
     NSString *_fontFamily;
-    CGFloat _fontSize;
-    CGFloat _fontWeight;
+    float _fontSize;
+    float _fontWeight;
     WXTextStyle _fontStyle;
     NSUInteger _lines;
     NSTextAlignment _textAlign;
     WXTextDecoration _textDecoration;
     NSString *_textOverflow;
-    CGFloat _lineHeight;
-    CGFloat _letterSpacing;
-    CGFloat _fontDescender;
-    CGFloat _fontAscender;
+    float _lineHeight;
+    float _letterSpacing;
+    float _fontDescender;
+    float _fontAscender;
     BOOL _truncationLine; // support trunk tail
     
     NSAttributedString * _ctAttributedString;
@@ -153,16 +150,6 @@ CGFloat WXTextDefaultLineThroughWidth = 1.2;
     pthread_mutexattr_t _propertMutexAttr;
     BOOL _observerIconfont;
     BOOL _enableCopy;
-}
-
-+ (void)setRenderUsingCoreText:(BOOL)usingCoreText
-{
-    textRenderUsingCoreText = usingCoreText;
-}
-
-+ (BOOL)textRenderUsingCoreText
-{
-    return textRenderUsingCoreText;
 }
 
 - (instancetype)initWithRef:(NSString *)ref
@@ -187,6 +174,8 @@ CGFloat WXTextDefaultLineThroughWidth = 1.2;
             _useCoreTextAttr = nil;
         }
         
+        _color[0] = -1.0;
+
         [self fillCSSStyles:styles];
         [self fillAttributes:attributes];
         
@@ -202,11 +191,7 @@ CGFloat WXTextDefaultLineThroughWidth = 1.2;
     if ([_useCoreTextAttr isEqualToString:@"false"]) {
         return NO;
     }
-    
-    if ([WXTextComponent textRenderUsingCoreText]) {
-        return YES;
-    }
-    return NO;
+    return YES;
 }
 
 - (void)dealloc
@@ -261,18 +246,37 @@ do {\
 
 - (void)fillCSSStyles:(NSDictionary *)styles
 {
-    WX_STYLE_FILL_TEXT_WITH_DEFAULT_VALUE(color, color, UIColor, [UIColor blackColor], NO)
-    WX_STYLE_FILL_TEXT(fontFamily, fontFamily, NSString, YES)
-    WX_STYLE_FILL_TEXT_PIXEL(fontSize, fontSize, YES)
-    WX_STYLE_FILL_TEXT(fontWeight, fontWeight, WXTextWeight, YES)
-    WX_STYLE_FILL_TEXT(fontStyle, fontStyle, WXTextStyle, YES)
-    WX_STYLE_FILL_TEXT(lines, lines, NSUInteger, YES)
-    WX_STYLE_FILL_TEXT(textAlign, textAlign, NSTextAlignment, NO)
-    WX_STYLE_FILL_TEXT(textDecoration, textDecoration, WXTextDecoration, YES)
-    WX_STYLE_FILL_TEXT(textOverflow, textOverflow, NSString, NO)
-    WX_STYLE_FILL_TEXT_PIXEL(lineHeight, lineHeight, YES)
-    WX_STYLE_FILL_TEXT_PIXEL(letterSpacing, letterSpacing, YES)
-    WX_STYLE_FILL_TEXT(wordWrap, wordWrap, NSString, YES);
+    WX_STYLE_FILL_TEXT(fontFamily, fontFamily, NSString, YES) //!OCLint
+    WX_STYLE_FILL_TEXT_PIXEL(fontSize, fontSize, YES) //!OCLint
+    WX_STYLE_FILL_TEXT(fontWeight, fontWeight, WXTextWeight, YES) //!OCLint
+    WX_STYLE_FILL_TEXT(fontStyle, fontStyle, WXTextStyle, YES) //!OCLint
+    WX_STYLE_FILL_TEXT(lines, lines, NSUInteger, YES) //!OCLint
+    WX_STYLE_FILL_TEXT(textAlign, textAlign, NSTextAlignment, NO) //!OCLint
+    WX_STYLE_FILL_TEXT(textDecoration, textDecoration, WXTextDecoration, YES) //!OCLint
+    WX_STYLE_FILL_TEXT(textOverflow, textOverflow, NSString, NO) //!OCLint
+    WX_STYLE_FILL_TEXT_PIXEL(lineHeight, lineHeight, YES) //!OCLint
+    WX_STYLE_FILL_TEXT_PIXEL(letterSpacing, letterSpacing, YES) //!OCLint
+    WX_STYLE_FILL_TEXT(wordWrap, wordWrap, NSString, YES); //!OCLint
+
+    UIColor* color = nil;
+    id value = styles[@"color"];
+    if (value) {
+        if([WXUtility isBlankString:value]){
+            color = [UIColor blackColor];
+        } else {
+            color = [WXConvert UIColor:value];
+        }
+        if (color) {
+            [self setNeedsRepaint];
+            CGFloat red, green, blue, alpha;
+            [color getRed:&red green:&green blue:&blue alpha:&alpha];
+            _color[0] = red;
+            _color[1] = green;
+            _color[2] = blue;
+            _color[3] = alpha;
+        }
+    }
+
     if (_fontFamily && !_observerIconfont) {
         // notification received when custom icon font file download finish
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(repaintText:) name:WX_ICONFONT_DOWNLOAD_NOTIFICATION object:nil];
@@ -373,10 +377,9 @@ do {\
 {
     CGContextRef context = UIGraphicsGetCurrentContext();
     if (_isCompositingChild) {
-        [self drawTextWithContext:context bounds:rect padding:_padding view:nil];
+        [self drawTextWithContext:context bounds:rect padding:_padding];
     } else {
-        WXTextView *textView = (WXTextView *)_view;
-        [self drawTextWithContext:context bounds:rect padding:_padding view:textView];
+        [self drawTextWithContext:context bounds:rect padding:_padding];
     }
     
     return nil;
@@ -491,14 +494,21 @@ do {\
         string = @"";
     }
     NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString: string];
-    if (_color) {
-        [attributedString addAttribute:NSForegroundColorAttributeName value:_color range:NSMakeRange(0, string.length)];
+    if (_color[0] >= 0) {
+        [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:_color[0] green:_color[1] blue:_color[2] alpha:_color[3]] range:NSMakeRange(0, string.length)];
     }
     
     // set font
-    UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:_fontStyle fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
-    CTFontRef ctFont = CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)font.fontDescriptor, font.pointSize, NULL);
-
+    UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+    CTFontRef ctFont;
+    
+    if (_fontStyle == WXTextStyleItalic) {
+        CGAffineTransform matrix = CGAffineTransformMake(1, 0, tanf(16 * (CGFloat)M_PI / 180), 1, 0, 0);
+        ctFont = CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)font.fontDescriptor, font.pointSize, &matrix);
+    }else {
+        ctFont = CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)font.fontDescriptor, font.pointSize, NULL);
+    }
+    
     _fontAscender = font.ascender;
     _fontDescender = font.descender;
     
@@ -535,14 +545,13 @@ do {\
         paragraphStyle.alignment = retAlign;
     }
     
-    if ([[_wordWrap lowercaseString] isEqualToString:@"break-word"]) {
-        paragraphStyle.lineBreakMode = NSLineBreakByWordWrapping;
-    } else if ([[_wordWrap lowercaseString] isEqualToString:@"normal"]){
-        paragraphStyle.lineBreakMode = NSLineBreakByClipping;
-    } else {
-         // set default lineBreakMode
+    if ([[_wordWrap lowercaseString] isEqualToString:@"anywhere"]) {
         paragraphStyle.lineBreakMode = NSLineBreakByCharWrapping;
     }
+    else {
+        paragraphStyle.lineBreakMode = NSLineBreakByWordWrapping;
+    }
+    
     _truncationLine = NO;
     if (_textOverflow && [_textOverflow length] > 0) {
         if (_lines && [_textOverflow isEqualToString:@"ellipsis"])
@@ -563,14 +572,6 @@ do {\
         [attributedString addAttribute:NSKernAttributeName value:@(_letterSpacing) range:(NSRange){0, attributedString.length}];
     }
     
-    if ([self adjustLineHeight]) {
-        if (_lineHeight > font.lineHeight) {
-            [attributedString addAttribute:NSBaselineOffsetAttributeName
-                                     value:@((_lineHeight - font.lineHeight)/ 2)
-                                     range:(NSRange){0, attributedString.length}];
-        }
-    }
-    
     return attributedString;
 }
 
@@ -581,8 +582,8 @@ do {\
     NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:string];
     
     // set textColor
-    if(_color) {
-        [attributedString addAttribute:NSForegroundColorAttributeName value:_color range:NSMakeRange(0, string.length)];
+    if (_color[0] >= 0) {
+        [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:_color[0] green:_color[1] blue:_color[2] alpha:_color[3]] range:NSMakeRange(0, string.length)];
     }
     
     // set font
@@ -628,13 +629,6 @@ do {\
         [attributedString addAttribute:NSParagraphStyleAttributeName
                                  value:paragraphStyle
                                  range:(NSRange){0, attributedString.length}];
-    }
-    if ([self adjustLineHeight]) {
-        if (_lineHeight > font.lineHeight) {
-            [attributedString addAttribute:NSBaselineOffsetAttributeName
-                                     value:@((_lineHeight - font.lineHeight)/ 2)
-                                     range:(NSRange){0, attributedString.length}];
-        }
     }
 
     return attributedString;
@@ -735,7 +729,7 @@ do {\
     [self syncTextStorageForView];
 }
 
-- (void)drawTextWithContext:(CGContextRef)context bounds:(CGRect)bounds padding:(UIEdgeInsets)padding view:(WXTextView *)view
+- (void)drawTextWithContext:(CGContextRef)context bounds:(CGRect)bounds padding:(UIEdgeInsets)padding
 {
     if (bounds.size.width <= 0 || bounds.size.height <= 0) {
         return;
@@ -791,12 +785,11 @@ do {\
         CTLineRef ctTruncatedLine = NULL;
         CTFrameGetLineOrigins(coreTextFrameRef, CFRangeMake(0, 0), lineOrigins);
         
-        CGFloat fixDescent = 0;
         if (lineCount > 0 && _lineHeight && WX_SYS_VERSION_LESS_THAN(@"10.0")) {
             CGFloat ascent, descent, leading;
             CTLineRef line1 = (CTLineRef)CFArrayGetValueAtIndex(ctLines, 0);
             CTLineGetTypographicBounds(line1, &ascent, &descent, &leading);
-            fixDescent = (descent + _fontDescender) + (ascent - _fontAscender);
+            lineOrigins[0].y += (_lineHeight-(leading+ascent+descent))/2;
         }
         
         for (CFIndex lineIndex = 0;(!_lines || _lines > lineIndex) && lineIndex < lineCount; lineIndex ++) {
@@ -807,7 +800,12 @@ do {\
             }
             CGPoint lineOrigin = lineOrigins[lineIndex];
             lineOrigin.x += padding.left;
-            lineOrigin.y -= padding.top + fixDescent;
+            if(_lineHeight && WX_SYS_VERSION_LESS_THAN(@"10.0")){
+                lineOrigin.y = lineOrigins[0].y - padding.top - _lineHeight * lineIndex ;
+            }else{
+                lineOrigin.y = lineOrigin.y - padding.top ;
+            }
+            
             CFArrayRef runs = CTLineGetGlyphRuns(lineRef);
             [mutableLines addObject:(__bridge id _Nonnull)(lineRef)];
             // lineIndex base 0
@@ -860,12 +858,12 @@ do {\
         run = (CTRunRef)CFArrayGetValueAtIndex(runs, runIndex);
         CFDictionaryRef attr = NULL;
         attr = CTRunGetAttributes(run);
-        if (0 == runIndex) {
-            NSNumber *baselineOffset = (NSNumber*)CFDictionaryGetValue(attr, (__bridge void *)NSBaselineOffsetAttributeName);
-            if (baselineOffset) {
-                lineOrigin.y += [baselineOffset doubleValue];
-            }
-        }
+        //To properly draw the glyphs in a run, the fields tx and ty of the CGAffineTransform returned by CTRunGetTextMatrix should be set to the current text position.
+        CGAffineTransform transform = CTRunGetTextMatrix(run);
+        transform.tx = lineOrigin.x;
+        transform.ty = lineOrigin.y;
+        CGContextSetTextMatrix(context, transform);
+        
         CGContextSetTextPosition(context, lineOrigin.x, lineOrigin.y);
         CTRunDraw(run, context, CFRangeMake(0, 0));
         CFIndex glyphCount = CTRunGetGlyphCount(run);
@@ -1111,7 +1109,10 @@ NS_INLINE NSRange WXNSRangeFromCFRange(CFRange range) {
 {
     [super _resetCSSNodeStyles:styles];
     if ([styles containsObject:@"color"]) {
-        _color = [UIColor blackColor];
+        _color[0] = 0;
+        _color[1] = 0;
+        _color[2] = 0;
+        _color[3] = 1.0;
         [self setNeedsRepaint];
     }
     if ([styles containsObject:@"fontSize"]) {

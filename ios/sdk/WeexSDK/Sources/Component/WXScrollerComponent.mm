@@ -102,6 +102,7 @@
     BOOL _scrollStartEvent;
     BOOL _scrollEndEvent;
     BOOL _isScrolling;
+    BOOL _isDragging;
     CGFloat _pageSize;
     CGFloat _loadMoreOffset;
     CGFloat _previousLoadMoreContentHeight;
@@ -225,7 +226,11 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
         //may be list
         if ([@"scroller" isEqualToString:type]) {
             [weexInstance.apmInstance updateDiffStats:KEY_PAGE_STATS_SCROLLER_NUM withDiffValue:1];
-        }        
+        }
+
+        if (weexInstance.instanceCallback) {
+            weexInstance.instanceCallback(weexInstance, WXScrollerComponentCreatedCallback, self);
+        }
     }
     
     return self;
@@ -265,8 +270,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
         if ([scrollView respondsToSelector:@selector(setContentInsetAdjustmentBehavior:)]) {
             scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
         }
-    } else {
-        // Fallback on earlier versions
     }
     
     if (self.ancestorScroller) {
@@ -446,8 +449,7 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     
     // this is scroll rtl solution.
     // scroll layout not use direction, use self tranform
-    if (self.view && _flexCssNode && _flexCssNode->getLayoutDirectionFromPathNode() == WeexCore::kDirectionRTL
-        ) {
+    if (self.view && [self isDirectionRTL]) {
         if (_transform) {
             self.view.layer.transform = CATransform3DConcat(self.view.layer.transform, CATransform3DScale(CATransform3DIdentity, -1, 1, 1));
         } else {
@@ -562,12 +564,26 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
 - (void)scrollToComponent:(WXComponent *)component withOffset:(CGFloat)offset animated:(BOOL)animated
 {
     UIScrollView *scrollView = (UIScrollView *)self.view;
+    // http://dotwe.org/vue/aa1af34e5fc745c0f1520e346904682a
+    // ignore scroll action if contentSize smaller than scroller frame
+    if (_scrollDirection == WXScrollDirectionVertical && scrollView.contentSize.height < scrollView.frame.size.height) {
+        return;
+    }
+    if (_scrollDirection == WXScrollDirectionHorizontal && scrollView.contentSize.width < scrollView.frame.size.width) {
+        return;
+    }
+
 
     CGPoint contentOffset = scrollView.contentOffset;
     CGFloat scaleFactor = self.weexInstance.pixelScaleFactor;
     
     if (_scrollDirection == WXScrollDirectionHorizontal) {
-        CGFloat contentOffetX = [component.supercomponent.view convertPoint:component.view.frame.origin toView:self.view].x;
+        CGFloat contentOffetX = 0;
+        if (self.isDirectionRTL && component.supercomponent != self) {
+            contentOffetX = [component.supercomponent.view convertPoint:CGPointMake(CGRectGetMaxX(component.view.frame), component.view.frame.origin.y) toView:self.view].x;
+        } else {
+            contentOffetX = [component.supercomponent.view convertPoint:component.view.frame.origin toView:self.view].x;
+        }
         contentOffetX += offset * scaleFactor;
         
         if (scrollView.contentSize.width >= scrollView.frame.size.width && contentOffetX > scrollView.contentSize.width - scrollView.frame.size.width) {
@@ -623,6 +639,12 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
         rtv = scrollView.contentOffset;
     }
     return rtv;
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset
+{
+    UIScrollView *scrollView = (UIScrollView *)self.view;
+    [scrollView setContentOffset:contentOffset];
 }
 
 - (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated
@@ -693,6 +715,8 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
 
 - (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
 {
+    _isDragging = YES;
+    
     if ([_refreshType isEqualToString:@"refreshForAppear"] && _refreshComponent) {
         [_refreshComponent setIndicatorHidden:NO];
     }
@@ -705,12 +729,13 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
                                           @"height":@(scrollView.contentSize.height / scaleFactor)};
         NSDictionary *contentOffsetData = @{@"x":@(-scrollView.contentOffset.x / scaleFactor),
                                             @"y":@(-scrollView.contentOffset.y / scaleFactor)};
+        NSDictionary *params = @{@"contentSize":contentSizeData, @"contentOffset":contentOffsetData, @"isDragging":@(scrollView.isDragging)};
         
         if (_scrollStartEvent) {
-            [self fireEvent:@"scrollstart" params:@{@"contentSize":contentSizeData, @"contentOffset":contentOffsetData} domChanges:nil];
+            [self fireEvent:@"scrollstart" params:params domChanges:nil];
         }
         if (_scrollEventListener) {
-            _scrollEventListener(self, @"scrollstart", @{@"contentSize":contentSizeData, @"contentOffset":contentOffsetData});
+            _scrollEventListener(self, @"scrollstart", params);
         }
     }
     
@@ -750,12 +775,15 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     }
     
     CGFloat scaleFactor = self.weexInstance.pixelScaleFactor;
-    [_refreshComponent pullingdown:@{
-             REFRESH_DISTANCE_Y: @(fabs((scrollView.contentOffset.y - _lastContentOffset.y)/scaleFactor)),
-             REFRESH_VIEWHEIGHT: @(_refreshComponent.view.frame.size.height/scaleFactor),
-             REFRESH_PULLINGDISTANCE: @(scrollView.contentOffset.y/scaleFactor),
-             @"type":@"pullingdown"
-    }];
+    if (_isDragging) {
+        // only trigger pullingDown event when user is dragging
+        [_refreshComponent pullingdown:@{
+                                         REFRESH_DISTANCE_Y: @(fabs((scrollView.contentOffset.y - _lastContentOffset.y)/scaleFactor)),
+                                         REFRESH_VIEWHEIGHT: @(_refreshComponent.view.frame.size.height/scaleFactor),
+                                         REFRESH_PULLINGDISTANCE: @(fabs(scrollView.contentOffset.y/scaleFactor)),
+                                         @"type":@"pullingdown"
+                                         }];
+    }
     _lastContentOffset = scrollView.contentOffset;
     // check sticky
     [self adjustSticky];
@@ -909,8 +937,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
             if( offset.y <= _refreshComponent.calculatedFrame.size.height ) {
                 [self loadMoreIfNeed];
             }
-        } else if (velocity.y > 0) {
-            // drop up
         }
     }
     
@@ -950,6 +976,8 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
             [delegate scrollViewDidEndDragging:scrollView willDecelerate:decelerate];
         }
     }
+    
+    _isDragging = NO;
 }
 
 - (void)loadMoreIfNeed
@@ -1123,6 +1151,11 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
             _flexCssNode->setParent(nullptr, _flexCssNode);
             _flexCssNode->calculateLayout(renderPageSize);
             _flexCssNode->setParent(parent, _flexCssNode);
+            
+            /* We must clear BFCs becuase we have set parent of _flexCSSNode to nullptr and
+             manually called its calculateLayout method. This will cause a non-bfc layout node
+             to have items in its BFCs vector. Later, a wild pointer may cause crash. */
+            _flexCssNode->clearBFCs();
             
             // set origin and size back
             _flexCssNode->rewriteLayoutResult(left, top, width, height);

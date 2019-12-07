@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
 
   s.name         = "WeexSDK"
 
-  s.version      = "0.20.0"
+  s.version      = "0.28.0"
 
   s.summary      = "WeexSDK Source."
 
@@ -12,24 +12,15 @@ Pod::Spec.new do |s|
                    A framework for building Mobile cross-platform UI
                    DESC
 
-  s.homepage     = "https://github.com/alibaba/weex"
+  s.homepage     = "https://github.com/apache/incubator-weex"
   s.license = {
-    :type => 'Copyright',
-    :text => <<-LICENSE
-           Alibaba-INC copyright
-    LICENSE
+    :type => 'Apache-2.0'
   }
   s.authors      = {
-                    "cxfeng1"      => "cxfeng1@gmail.com",
-                    "boboning"     => "ningli928@163.com",
-                    "yangshengtao" => "yangshengtao1314@163.com",
-                    "kfeagle"      => "sunjjbobo@163.com",
-                    "acton393"     => "zhangxing610321@gmail.com",
-                    "wqyfavor"     => "wqyfavor88@gmail.com",
-                    "doumafang "   => "doumafang@gmail.com"
+                    "dev" => "dev@weex.apache.org"
                    }
   s.platform     = :ios
-  s.ios.deployment_target = '8.0'
+  s.ios.deployment_target = '9.0'
 
   # use for public
   # s.source =  {
@@ -47,7 +38,16 @@ Pod::Spec.new do |s|
                     'weex_core/Source/third_party/**/*.{h,hpp,m,mm,c,cpp,cc}',
                     'weex_core/Source/include/**/*.{h,hpp,m,mm,c,cpp,cc}'
   s.exclude_files = 'weex_core/Source/**/*android.{h,hpp,m,mm,c,cpp,cc}',
-                    'weex_core/Source/core/network/android/'
+                    'weex_core/Source/base/android',
+                    'weex_core/Source/base/base64',
+                    'weex_core/Source/base/crash',
+                    'weex_core/Source/base/utils/Compatible.cpp',
+                    'weex_core/Source/base/utils/ThreadLocker.cpp',
+                    'weex_core/Source/core/parser/action_args_check.*',
+                    'weex_core/Source/third_party/IPC',
+                    'weex_core/Source/core/network/android/',
+                    'weex_core/Source/include/JavaScriptCore/',
+                    'weex_core/Source/include/wtf'
 
   s.private_header_files = 'ios/sdk/WeexSDK/Sources/Component/RecycleList/WXJSASTParser.h'
   s.public_header_files = 'ios/sdk/WeexSDK/Sources/WeexSDK.h',
@@ -58,14 +58,17 @@ Pod::Spec.new do |s|
                           'ios/sdk/WeexSDK/Sources/Module/WXVoiceOverModule.h',
                           'ios/sdk/WeexSDK/Sources/Module/WXPrerenderManager.h',
                           'ios/sdk/WeexSDK/Sources/Module/WXModalUIModule.h',
+                          'ios/sdk/WeexSDK/Sources/Module/WXStreamModule.h',
                           'ios/sdk/WeexSDK/Sources/Component/WXListComponent.h',
                           'ios/sdk/WeexSDK/Sources/Component/WXScrollerComponent.h',
                           'ios/sdk/WeexSDK/Sources/Component/WXRichText.h',
                           'ios/sdk/WeexSDK/Sources/Component/WXIndicatorComponent.h',
                           'ios/sdk/WeexSDK/Sources/Component/WXAComponent.h',
+                          'ios/sdk/WeexSDK/Sources/Component/WXRefreshComponent.h',
                           'ios/sdk/WeexSDK/Sources/Component/Recycler/WXRecyclerComponent.h',
                           'ios/sdk/WeexSDK/Sources/Controller/WXBaseViewController.h',
                           'ios/sdk/WeexSDK/Sources/Controller/WXRootViewController.h',
+                          'ios/sdk/WeexSDK/Sources/Handler/WXNavigationDefaultImpl.h',
                           'ios/sdk/WeexSDK/Sources/View/WXView.h',
                           'ios/sdk/WeexSDK/Sources/View/WXErrorView.h',
                           'ios/sdk/WeexSDK/Sources/Protocol/*.h',
@@ -78,15 +81,18 @@ Pod::Spec.new do |s|
                           'ios/sdk/WeexSDK/Sources/Monitor/WXMonitor.h',
                           'ios/sdk/WeexSDK/Sources/Monitor/WXExceptionUtils.h',
                           'ios/sdk/WeexSDK/Sources/Monitor/WXAnalyzerCenter.h',
-                          'ios/sdk/WeexSDK/Sources/Manager/WXTracingManager.h',
                           'ios/sdk/WeexSDK/Sources/Manager/WXSDKManager.h',
                           'ios/sdk/WeexSDK/Sources/Manager/WXBridgeManager.h',
                           'ios/sdk/WeexSDK/Sources/Manager/WXComponentManager.h',
-                          'ios/sdk/WeexSDK/Sources/Manager/WXDisplayLinkManager.h',
+                          'ios/sdk/WeexSDK/Sources/Manager/WXHandlerFactory.h',
+                          'ios/sdk/WeexSDK/Sources/Manager/WXComponentFactory.h',
+                          'ios/sdk/WeexSDK/Sources/Manager/WXInvocationConfig.h',
                           'ios/sdk/WeexSDK/Sources/Engine/WXSDKEngine.h',
                           'ios/sdk/WeexSDK/Sources/Engine/WXSDKError.h',
+                          'ios/sdk/WeexSDK/Sources/Eagle/WXDataRenderHandler.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXConvert.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXUtility.h',
+                          'ios/sdk/WeexSDK/Sources/Utility/WXConvertUtility.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXLog.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXDefine.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXType.h',
@@ -94,9 +100,11 @@ Pod::Spec.new do |s|
                           'ios/sdk/WeexSDK/Sources/Utility/WXAppConfiguration.h',
                           'ios/sdk/WeexSDK/Sources/Performance/WXApmForInstance.h',
                           'ios/sdk/WeexSDK/Sources/Bridge/JSContext+Weex.h',
+                          'ios/sdk/WeexSDK/Sources/Bridge/WXBridgeMethod.h',
                           'weex_core/Source/core/layout/flex_enum.h',
                           'weex_core/Source/core/layout/layout.h',
-                          'weex_core/Source/core/layout/style.h'
+                          'weex_core/Source/core/layout/style.h',
+                          'weex_core/Source/core/bridge/eagle_bridge.h'
 
   s.module_map = 'WeexSDK.modulemap'
 
@@ -108,7 +116,7 @@ Pod::Spec.new do |s|
   s.prefix_header_file = 'ios/sdk/WeexSDK/Sources/Supporting Files/WeexSDK-Prefix.pch'
 
   s.xcconfig = { "OTHER_LINK_FLAG" => '$(inherited) -ObjC' }
-  s.pod_target_xcconfig = { 'USER_HEADER_SEARCH_PATHS' => '${PODS_ROOT}/WeexSDK/weex_core/Source/ ${PROJECT_DIR}/../../../weex_core/Source',
+  s.pod_target_xcconfig = { 'USER_HEADER_SEARCH_PATHS' => '${PODS_TARGET_SRCROOT}/weex_core/Source/ ${PROJECT_DIR}/../../../weex_core/Source',
     'GCC_PREPROCESSOR_DEFINITIONS' => 'OS_IOS=1' }
 
   s.frameworks = 'CoreMedia','MediaPlayer','AVFoundation','AVKit','JavaScriptCore','GLKit','OpenGLES','CoreText','QuartzCore','CoreGraphics'

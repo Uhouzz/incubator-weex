@@ -19,7 +19,8 @@
 
 #import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
-#import "WXDisplayLinkManager.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 @class WXBridgeMethod;
 @class WXSDKInstance;
@@ -36,7 +37,7 @@ void WXPerformBlockSyncOnComponentThread(void (^block)(void));
 }
 #endif
 
-@interface WXComponentManager : NSObject <WXDisplayLinkClient>
+@interface WXComponentManager : NSObject
 
 @property (nonatomic, readonly, weak) WXSDKInstance *weexInstance;
 @property (nonatomic, readonly, assign) BOOL isValid;
@@ -122,6 +123,11 @@ void WXPerformBlockSyncOnComponentThread(void (^block)(void));
  * @abstract add an existing component to references look-up map
  */
 - (void)addComponent:(WXComponent *)component toIndexDictForRef:(NSString *)ref;
+
+/**
+ * @abstract remove an existing component to references look-up map
+ */
+- (void)removeComponentForRef:(NSString *)ref;
 
 ///--------------------------------------
 /// @name Updating
@@ -277,3 +283,5 @@ void WXPerformBlockSyncOnComponentThread(void (^block)(void));
 - (void)performBatchEnd;
 
 @end
+
+NS_ASSUME_NONNULL_END

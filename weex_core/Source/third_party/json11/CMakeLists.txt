@@ -16,7 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
 cmake_minimum_required(VERSION 3.4.1)
 
 set(JSON11_LIBRARY_NAME json11)

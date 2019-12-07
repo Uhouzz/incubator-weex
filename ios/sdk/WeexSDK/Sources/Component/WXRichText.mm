@@ -25,12 +25,14 @@
 #import "WXComponent+Layout.h"
 #import "WXNavigationProtocol.h"
 #import "WXImgLoaderProtocol.h"
+#import "WXComponentManager.h"
 #import "WXLog.h"
 #include <pthread/pthread.h>
 
 @interface WXRichNode : NSObject
 
 @property (nonatomic, strong) NSString  *type;
+@property (nonatomic, strong) NSString  *ref;
 @property (nonatomic, strong) NSString  *text;
 @property (nonatomic, strong) UIColor   *color;
 @property (nonatomic, strong) UIColor   *backgroundColor;
@@ -45,10 +47,18 @@
 @property (nonatomic, strong) NSURL *href;
 @property (nonatomic, strong) NSURL *src;
 @property (nonatomic, assign) NSRange range;
+@property (nonatomic, strong) NSMutableArray *childNodes;
 
 @end
 
 @implementation WXRichNode
+- (instancetype)init
+{
+    if (self = [super init]) {
+        _childNodes = [[NSMutableArray alloc] init];
+    }
+    return self;
+}
 
 @end
 
@@ -104,10 +114,8 @@ do {\
     NSMutableDictionary *_nodeRanges;
     NSMutableDictionary *_styles;
     NSMutableDictionary *_attributes;
-    UIEdgeInsets _padding;
     NSTextAlignment _textAlign;
     UIColor *_backgroundColor;
-    NSMutableAttributedString *_attributedString;
     pthread_mutex_t _attributedStringMutex;
     pthread_mutexattr_t _propertMutexAttr;
     CGFloat _lineHeight;
@@ -154,13 +162,18 @@ do {\
 - (void)fillAttributes:(NSDictionary *)attributes
 {
     id value = attributes[@"value"];
+    if (!value) {
+        return;
+    }
+    if ([value isKindOfClass:[NSString class]]) {
+        value = [WXUtility objectFromJSON:value];
+    }
     if ([value isKindOfClass: [NSArray class]]) {
         [_richNodes removeAllObjects];
         
         WXRichNode *rootNode = [[WXRichNode alloc]init];
         [_richNodes addObject:rootNode];
         
-        //记录richtext根节点styles，仅用于子节点的样式继承
         rootNode.type = @"root";
         if (_styles) {
             [self fillCSSStyles:_styles toNode:rootNode superNode:nil];
@@ -199,6 +212,9 @@ do {\
     }
     else if (superNode.href) {
         node.href = superNode.href;
+        if (!(node.pseudoRef.length) && superNode.pseudoRef.length) {
+            node.pseudoRef = superNode.pseudoRef;
+        }
     }
     
     if (attributes[@"src"]) {
@@ -247,6 +263,79 @@ do {\
     }
 }
 
+- (WXRichNode*)findRichNode:(NSString*)ref {
+    NSMutableArray *array = [NSMutableArray arrayWithArray:_richNodes];
+    for (WXRichNode* node in array) {
+        if ([node.ref isEqualToString:ref]) {
+            return node;
+        }
+    }
+    return nil;
+}
+
+- (NSInteger)indexOfRichNode:(WXRichNode*)node {
+    NSInteger index = -1;
+    NSMutableArray *array = [NSMutableArray arrayWithArray:_richNodes];
+    for (WXRichNode* item in array) {
+        if ([item.ref isEqualToString:node.ref]) {
+            return index+1;
+        }
+        index++;
+    }
+    return index;
+}
+
+- (void)removeChildNode:(NSString*)ref superNodeRef:(NSString *)superNodeRef {
+    WXRichNode* node = [self findRichNode:ref];
+    WXRichNode* superNode = [self findRichNode:@"_root"];
+    if (superNodeRef.length > 0) {
+        superNode = [self findRichNode:superNodeRef];
+    }
+    if (superNode) {
+         [superNode.childNodes removeObject:node];
+    }
+    [_richNodes removeObject:node];
+    [self setNeedsLayout];
+    [self innerLayout];
+}
+
+- (void)addChildNode:(NSString *)type ref:(NSString*)ref styles:(NSDictionary*)styles attributes:(NSDictionary*)attributes  toSuperNodeRef:(NSString *)superNodeRef {
+    if ([_richNodes count] == 0) {
+        WXRichNode *rootNode = [[WXRichNode alloc]init];
+        [_richNodes addObject:rootNode];
+        rootNode.type = @"root";
+        rootNode.ref = @"_root";
+        if (_styles) {
+            [self fillCSSStyles:_styles toNode:rootNode superNode:nil];
+        }
+        _backgroundColor = rootNode.backgroundColor?:[UIColor whiteColor];
+    }
+
+    WXRichNode* superNode = [self findRichNode:@"_root"];
+    if (superNodeRef.length > 0) {
+        superNode = [self findRichNode:superNodeRef];
+    }
+
+    WXRichNode *node = [[WXRichNode alloc]init];
+    node.ref = ref;
+    NSInteger index = [self indexOfRichNode:superNode];
+    if (index < 0) {
+        return;
+    }
+    if (index == 0) {
+        [_richNodes addObject:node];
+    } else {
+        [_richNodes insertObject:node atIndex:(index + superNode.childNodes.count + 1)];
+    }
+    [superNode.childNodes addObject:node];
+    node.type = type;
+
+    [self fillCSSStyles:styles toNode:node superNode:superNode];
+    [self fillAttributes:attributes toNode:node superNode:superNode];
+    [self setNeedsLayout];
+    [self innerLayout];
+}
+
 #pragma mark - Subclass
 
 - (UIView *)loadView
@@ -271,24 +360,29 @@ do {\
 
 - (void)innerLayout
 {
-    if (self.flexCssNode == nullptr) {
-        return;
-    }
-    UIEdgeInsets padding = {
-            WXFloorPixelValue(self.flexCssNode->getPaddingTop()+self.flexCssNode->getBorderWidthTop()),
-            WXFloorPixelValue(self.flexCssNode->getPaddingLeft()+self.flexCssNode->getBorderWidthLeft()),
-            WXFloorPixelValue(self.flexCssNode->getPaddingBottom()+self.flexCssNode->getBorderWidthBottom()),
-            WXFloorPixelValue(self.flexCssNode->getPaddingRight()+self.flexCssNode->getBorderWidthRight())
-        };
-
-    
-    _padding = padding;
-    
-    _attributedString = [self buildAttributeString];
-
-    [self textView].attributedText = _attributedString;
-    [self textView].textContainerInset = _padding;
-    [self textView].backgroundColor = [UIColor clearColor];
+    __weak typeof(self) wself = self;
+    WXPerformBlockOnComponentThread(^{
+        __strong typeof(wself) sself = wself;
+        if (sself) {
+            if (sself.flexCssNode == nullptr) {
+                return;
+            }
+            UIEdgeInsets padding = {
+                WXFloorPixelValue(sself.flexCssNode->getPaddingTop()+sself.flexCssNode->getBorderWidthTop()),
+                WXFloorPixelValue(sself.flexCssNode->getPaddingLeft()+sself.flexCssNode->getBorderWidthLeft()),
+                WXFloorPixelValue(sself.flexCssNode->getPaddingBottom()+sself.flexCssNode->getBorderWidthBottom()),
+                WXFloorPixelValue(sself.flexCssNode->getPaddingRight()+sself.flexCssNode->getBorderWidthRight())
+            };
+            
+            NSMutableAttributedString* attrString = [sself buildAttributeString];
+            WXPerformBlockOnMainThread(^{
+                WXRichTextView* view = [sself textView];
+                view.attributedText = attrString;
+                view.textContainerInset = padding;
+                view.backgroundColor = [UIColor clearColor];
+            });
+        }
+    });
 }
 
 - (CGSize (^)(CGSize))measureBlock
@@ -440,13 +534,50 @@ do {\
     if (styles[@"lineHeight"]) {
         _lineHeight = [WXConvert CGFloat:styles[@"lineHeight"]] / 2;
     }
-    [_styles addEntriesFromDictionary:styles];
-    [self syncTextStorageForView];
+    
+    WXPerformBlockOnComponentThread(^{
+        [_styles addEntriesFromDictionary:styles];
+        [self syncTextStorageForView];
+    });
+}
+
+- (void)updateChildNodeStyles:(NSDictionary *)styles ref:(NSString*)ref parentRef:(NSString*)parentRef {
+    WXPerformBlockOnComponentThread(^{
+        WXRichNode* node =  [self findRichNode:ref];
+        if (node) {
+            WXRichNode* superNode = [self findRichNode:@"_root"];
+            if (parentRef.length > 0) {
+                superNode = [self findRichNode:parentRef];
+            }
+            if (superNode) {
+                [self fillCSSStyles:styles toNode:node superNode:superNode];
+                [self syncTextStorageForView];
+            }
+        }
+    });
 }
 
 - (void)updateAttributes:(NSDictionary *)attributes {
-    _attributes = [NSMutableDictionary dictionaryWithDictionary:attributes];
-    [self syncTextStorageForView];
+    WXPerformBlockOnComponentThread(^{
+        _attributes = [NSMutableDictionary dictionaryWithDictionary:attributes];
+        [self syncTextStorageForView];
+    });
+}
+
+- (void)updateChildNodeAttributes:(NSDictionary *)attributes ref:(NSString*)ref parentRef:(NSString*)parentRef {
+    WXPerformBlockOnComponentThread(^{
+        WXRichNode* node =  [self findRichNode:ref];
+        if (node) {
+            WXRichNode* superNode = [self findRichNode:@"_root"];
+            if (parentRef.length > 0) {
+                superNode = [self findRichNode:parentRef];
+            }
+            if (superNode) {
+                [self fillAttributes:attributes toNode:node superNode:superNode];
+                [self syncTextStorageForView];
+            }
+        }
+    });
 }
 
 - (void)syncTextStorageForView {

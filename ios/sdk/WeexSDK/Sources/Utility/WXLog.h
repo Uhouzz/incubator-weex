@@ -19,6 +19,8 @@
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
 #define WXLogLevel WeexLogLevel
 
 typedef NS_ENUM(NSInteger, WXLogFlag) {
@@ -100,6 +102,8 @@ typedef NS_ENUM(NSUInteger, WEEXLogLevel){
 
 + (void)registerExternalLog:(id<WXLogProtocol>)externalLog;
 
++ (id<WXLogProtocol>)getCurrentExternalLog;
+
 @end
 
 #define WX_FILENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -120,3 +124,5 @@ extern void _WXLogObjectsImpl(NSString *severity, NSArray *arguments);
 #define WXLogInfo(format, ...)          WX_LOG(WXLogFlagInfo, format, ##__VA_ARGS__)
 #define WXLogWarning(format, ...)       WX_LOG(WXLogFlagWarning, format ,##__VA_ARGS__)
 #define WXLogError(format, ...)         WX_LOG(WXLogFlagError, format, ##__VA_ARGS__)
+
+NS_ASSUME_NONNULL_END
