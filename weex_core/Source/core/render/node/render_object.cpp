@@ -17,9 +17,10 @@
  * under the License.
  */
 
-#include <math.h>
 #include "core/render/node/render_object.h"
-#include "base/ViewUtils.h"
+#include <math.h>
+
+#include "core/common/view_utils.h"
 #include "core/css/constants_name.h"
 #include "core/css/constants_value.h"
 #include "core/css/css_value_getter.h"
@@ -61,19 +62,32 @@ RenderObject::~RenderObject() {
       delete child;
     }
   }
+
+  for (auto it : shadow_objects_) {
+      delete it;
+  }
 }
 
-void RenderObject::ApplyDefaultStyle() {
+void RenderObject::ApplyDefaultStyle(bool reserve) {
   std::map<std::string, std::string> *style = GetDefaultStyle();
 
   if (style == nullptr) return;
 
   for (auto iter = style->cbegin(); iter != style->cend(); iter++)
-    AddStyle(iter->first, iter->second);
+    AddStyle(iter->first, iter->second, reserve);
 
   if (style != nullptr) {
     delete style;
   }
+}
+
+RenderObject* RenderObject::RichtextParent() {
+    if (parent_render_ && parent_render_->type() == "richtext") {
+        return parent_render_;
+    } else if (parent_render_) {
+        return parent_render_->RichtextParent();
+    }
+    return nullptr;
 }
 
 void RenderObject::ApplyDefaultAttr() {
@@ -325,9 +339,25 @@ const std::string RenderObject::GetAttr(const std::string &key) {
   }
 }
 
+bool RenderObject::hasShadow(const RenderObject* shadow) const {
+    if(std::find(shadow_objects_.begin(), shadow_objects_.end(), shadow) != shadow_objects_.end()){
+        return true;
+    }else{
+        return false;
+    }
+}
+
 int RenderObject::AddRenderObject(int index, RenderObject *child) {
   if (child == nullptr || index < -1) {
     return index;
+  }
+
+  if (type() == "richtext") {
+      if (!hasShadow(child)) {
+          shadow_objects_.push_back(child);
+          child->set_parent_render(this);
+      }
+      return index;
   }
 
   Index count = getChildCount();
@@ -369,7 +399,14 @@ bool RenderObject::UpdateStyleInternal(const std::string key,
   } else {
     float fvalue = getFloatByViewport(value,
                                       RenderManager::GetInstance()->viewport_width(page_id()),
-                                      RenderManager::GetInstance()->round_off_deviation(page_id()));
+                                      RenderManager::GetInstance()->DeviceWidth(page_id()),
+#if OS_IOS
+                                      // reduce a map search on iOS
+                                      false
+#else
+                                      RenderManager::GetInstance()->round_off_deviation(page_id())
+#endif
+                                      );
     if (!isnan(fvalue)) {
       functor(fvalue);
       ret = true;
@@ -442,7 +479,7 @@ bool RenderObject::ViewInit() {
 }
 
 RenderPage *RenderObject::GetRenderPage() {
-  return RenderManager::GetInstance()->GetPage(page_id());
+  return static_cast<RenderPage*>(RenderManager::GetInstance()->GetPage(page_id()));
 }
 
 bool RenderObject::IsAppendTree() {
@@ -460,20 +497,42 @@ void RenderObject::UpdateAttr(std::string key, std::string value) {
 StyleType RenderObject::UpdateStyle(std::string key, std::string value) {
   return ApplyStyle(key, value, true);
 }
+  
+void RenderObject::MergeStyles(std::vector<std::pair<std::string, std::string>> *src) {
+  if (src) {
+    for (auto& p : *src) {
+      MapInsertOrAssign(styles_, p.first, p.second);
+    }
+  }
+}
 
 RenderObject *RenderObject::GetChild(const Index &index) {
   return static_cast<RenderObject *>(getChildAt(index));
 }
 
 void RenderObject::RemoveRenderObject(RenderObject *child) {
-  removeChild(child);
+    if (type() == "richtext") {
+        int index = 0;
+        for (auto it : shadow_objects_) {
+            if (it == child) {
+                shadow_objects_.erase(shadow_objects_.begin() + index);
+                return;
+            }
+            index++;
+        }
+    } else {
+          removeChild(child);
+    }
 }
 
 void RenderObject::AddAttr(std::string key, std::string value) {
   MapInsertOrAssign(this->attributes_, key, value);
 }
 
-StyleType RenderObject::AddStyle(std::string key, std::string value) {
+StyleType RenderObject::AddStyle(std::string key, std::string value, bool reserve) {
+  if (reserve) {
+    MapInsertOrAssign(styles_, key, value);
+  }
   return ApplyStyle(key, value, false);
 }
 

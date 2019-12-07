@@ -232,6 +232,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 {
     if(self.view) {
         [self.view becomeFirstResponder];
+        self.weexInstance.apmInstance.forceStopRecordInteractionTime = YES;
     }
 }
 
@@ -674,18 +675,12 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         if (cursorPosition == textField.text.length) {
             adjust = newString.length-oldText.length;
         }
-        if (textField.deleteWords &&[textField.editWords isKindOfClass:[NSString class]] && [_recoverRule isEqualToString:textField.editWords]) {
-            // do nothing
-        } else {
+        if (!textField.deleteWords || ![textField.editWords isKindOfClass:[NSString class]] || ![_recoverRule isEqualToString:textField.editWords]) {
             textField.text = [newString copy];
             UITextPosition * newPosition = [textField positionFromPosition:textField.beginningOfDocument offset:cursorPosition+adjust];
             textField.selectedTextRange = [textField textRangeFromPosition:newPosition toPosition:newPosition];
         }
 
-    }
-    if (_inputEvent) {
-        // bind each other , the key must be attrs
-        [self fireEvent:@"input" params:@{@"value":[textField text]} domChanges:@{@"attrs":@{@"value":[textField text]}}];
     }
     
     if (_maxLength) {
@@ -705,6 +700,11 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
             }
         }
     }
+
+    if (_inputEvent) {
+        // bind each other , the key must be attrs
+        [self fireEvent:@"input" params:@{@"value":[textField text]} domChanges:@{@"attrs":@{@"value":[textField text]}}];
+    }
 }
 
 - (void)setViewMovedUp:(BOOL)movedUp
@@ -714,7 +714,8 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     CGRect rootViewFrame = rootView.frame;
     CGRect inputFrame = [self.view.superview convertRect:self.view.frame toView:rootView];
     if (movedUp) {
-        CGFloat offset = inputFrame.origin.y-(rootViewFrame.size.height-_keyboardSize.height-inputFrame.size.height) + _upriseOffset;
+        CGFloat inputOffset = inputFrame.size.height - (rootViewFrame.size.height - inputFrame.origin.y);
+        CGFloat offset = inputFrame.origin.y-(rootViewFrame.size.height-_keyboardSize.height- (inputOffset > 0 ? inputFrame.size.height - inputOffset : inputFrame.size.height)) + _upriseOffset;
         if (offset > 0) {
             rect = (CGRect){
                 .origin.x = 0.f,
@@ -845,6 +846,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         }else
         {
             [self.view becomeFirstResponder];
+             self.weexInstance.apmInstance.forceStopRecordInteractionTime = YES;
         }
     } else {
         if([self isDateType])

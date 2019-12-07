@@ -23,7 +23,6 @@
 #import "WXAppMonitorProtocol.h"
 #import "WXSDKManager.h"
 #import "WXLog.h"
-#import "WXTracingManager.h"
 #import "WXAnalyzerCenter.h"
 #import "WXAnalyzerCenter+Transfer.h"
 #import "WXUtility.h"
@@ -61,7 +60,7 @@
 
 + (void) transferPerformance:(NSString*)instanceId withType:(NSString*) type andKey:(NSString*) key andValue:(id)value
 {
-    if (![self isOpen]) {
+    if (![self isOpen] || !instanceId) {
         return;
     }
 
@@ -207,6 +206,15 @@
             WXPerformBlockOnBridgeThread(^(){
                 NSArray* args = @[isOpen?@(1):@(0)];
                 [bridgeCtx performSelector:@selector(callJSMethod:args:) withObject:@"switchInteractionLog" withObject:args];
+            });
+        }
+    }
+    if ([WXSDKManager.bridgeMgr respondsToSelector:@selector(backupBridgeCtx)]) {
+        id backupBridgeCtx = [WXSDKManager.bridgeMgr performSelector:@selector(backupBridgeCtx) withObject:nil];
+        if (nil != backupBridgeCtx && [backupBridgeCtx respondsToSelector:@selector(callJSMethod:args:)]) {
+            WXPerformBlockOnBackupBridgeThread(^(){
+                NSArray* args = @[isOpen?@(1):@(0)];
+                [backupBridgeCtx performSelector:@selector(callJSMethod:args:) withObject:@"switchInteractionLog" withObject:args];
             });
         }
     }
