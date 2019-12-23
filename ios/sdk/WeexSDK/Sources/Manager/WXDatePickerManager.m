@@ -129,6 +129,18 @@
                     self.datePicker.date = date;
                 }
             }
+        }else if([_type isEqualToString:@"datetime"])
+        {
+            self.datePicker.datePickerMode = UIDatePickerModeDateAndTime;
+            NSString *value = [WXConvert NSString:attributes[@"value"]];
+            if(value)
+            {
+                NSDate *date = [WXUtility dateTimeToString:value];
+                if(date)
+                {
+                    self.datePicker.date = date;
+                }
+            }
         }
     }
 }

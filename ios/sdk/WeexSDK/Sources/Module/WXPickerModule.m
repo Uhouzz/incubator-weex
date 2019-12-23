@@ -67,7 +67,7 @@
 WX_EXPORT_METHOD(@selector(pick:callback:))
 WX_EXPORT_METHOD(@selector(pickDate:callback:))
 WX_EXPORT_METHOD(@selector(pickTime:callback:))
-
+WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
 #pragma mark -
 #pragma mark Single Picker
 -(void)dealloc
@@ -393,7 +393,7 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
 
 
 #pragma mark -
-#pragma Date & Time Picker
+#pragma Date & Time & DateTime Picker
 -(void)pickDate:(NSDictionary *)options callback:(WXModuleKeepAliveCallback)callback
 {
     if (UIAccessibilityIsVoiceOverRunning()) {
@@ -413,10 +413,20 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
     self.datePickerMode = UIDatePickerModeTime;
     [self datepick:options callback:callback];
 }
+
+-(void)pickDateTime:(NSDictionary *)options callback:(WXModuleKeepAliveCallback)callback
+{
+    if (UIAccessibilityIsVoiceOverRunning()) {
+        [self handleA11yFocusback:options];
+    }
+    _pickerType = @"pickDateTime";
+    self.datePickerMode = UIDatePickerModeDateAndTime;
+    [self datepick:options callback:callback];
+}
     
 -(void)datepick:(NSDictionary *)options callback:(WXModuleKeepAliveCallback)callback
 {
-    if ((UIDatePickerModeTime == self.datePickerMode) || (UIDatePickerModeDate == self.datePickerMode)) {
+    if ((UIDatePickerModeTime == self.datePickerMode) || (UIDatePickerModeDate == self.datePickerMode) || (UIDatePickerModeDateAndTime == self.datePickerMode)) {
         [self createDatePicker:options callback:callback];
     } else {
         if (callback) {
@@ -463,6 +473,15 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
         NSString *value = [WXConvert NSString:options[@"value"]];
         if (value) {
             NSDate *date = [WXUtility timeStringToDate:value];
+            if (date) {
+                self.datePicker.date = date;
+            }
+        }
+    }else if (UIDatePickerModeDateAndTime == self.datePickerMode) {
+        self.datePicker.datePickerMode = UIDatePickerModeDateAndTime;
+        NSString *value = [WXConvert NSString:options[@"value"]];
+        if (value) {
+            NSDate *date = [WXUtility datetimeStringToDate:value];
             if (date) {
                 self.datePicker.date = date;
             }
@@ -538,6 +557,10 @@ WX_EXPORT_METHOD(@selector(pickTime:callback:))
     } else if(UIDatePickerModeDate == self.datePicker.datePickerMode)
     {
         value = [WXUtility dateToString:self.datePicker.date];
+    }
+    else if(UIDatePickerModeDateAndTime == self.datePicker.datePickerMode)
+    {
+        value = [WXUtility dateTimeToString:self.datePicker.date];
     }
     if (self.callback) {
         self.callback(@{ @"result": @"success",@"data":value},NO);
