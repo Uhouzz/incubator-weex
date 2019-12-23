@@ -383,6 +383,11 @@ CGFloat WXCeilPixelValue(CGFloat value);
 + (NSDate *_Nullable)timeStringToDate:(NSString *_Nullable)timeString;
 
 /**
+*  @abstract convert time string with formatter yyyy-MM-dd HH:mm to date.
+*
+*/
++ (NSDate *_Nullable)datetimeStringToDate:(NSString *_Nullable)datetimeString;
+/**
  *  @abstract convert date to date string with formatter yyyy-MM-dd .
  *
  */
@@ -393,6 +398,11 @@ CGFloat WXCeilPixelValue(CGFloat value);
  *
  */
 + (NSString *_Nullable)timeToString:(NSDate *_Nullable)date;
+/**
+*  @abstract convert date to time string with formatter yyyy-MM-dd HH:mm .
+*
+*/
++ (NSString *_Nullable)dateTimeToString:(NSDate *_Nullable)date;
 
 /**
  *  @abstract get the repeat substring number of string.

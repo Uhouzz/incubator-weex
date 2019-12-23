@@ -811,7 +811,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (BOOL)isDateType
 {
-    if([_inputType isEqualToString:@"date"] || [_inputType isEqualToString:@"time"])
+    if([_inputType isEqualToString:@"date"] || [_inputType isEqualToString:@"time"] || [_inputType isEqualToString:@"datetime"])
         return YES;
     return NO;
 }

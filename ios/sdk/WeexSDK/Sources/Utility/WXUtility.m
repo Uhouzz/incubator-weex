@@ -918,6 +918,13 @@ CGFloat WXFloorPixelValue(CGFloat value)
     return date;
 }
 
++ (NSDate *)datetimeStringToDate:(NSString *)datetimeString
+{
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init] ;
+    [formatter setDateFormat:@"yyyy-MM-dd HH:mm"];
+    NSDate *date=[formatter dateFromString:datetimeString];
+    return date;
+}
 + (NSString *)dateToString:(NSDate *)date
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
@@ -930,6 +937,14 @@ CGFloat WXFloorPixelValue(CGFloat value)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     [dateFormatter setDateFormat:@"HH:mm"];
+    NSString *str = [dateFormatter stringFromDate:date];
+    return str;
+}
+
++ (NSString *)dateTimeToString:(NSDate *)date
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm"];
     NSString *str = [dateFormatter stringFromDate:date];
     return str;
 }
