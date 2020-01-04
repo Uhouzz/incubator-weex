@@ -477,6 +477,23 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
                 self.datePicker.date = date;
             }
         }
+        
+        NSString *max = [WXConvert NSString:options[@"max"]];
+        if (max) {
+            NSDate *date = [WXUtility timeStringToDate:max];
+            if (date) {
+                self.datePicker.maximumDate =date;
+            }
+        }
+        
+        NSString *min = [WXConvert NSString:options[@"min"]];
+        if (min) {
+            NSDate *date = [WXUtility timeStringToDate:min];
+            if (date) {
+                self.datePicker.minimumDate =date;
+            }
+        }
+        
     }else if (UIDatePickerModeDateAndTime == self.datePickerMode) {
         self.datePicker.datePickerMode = UIDatePickerModeDateAndTime;
         NSString *value = [WXConvert NSString:options[@"value"]];
@@ -486,6 +503,23 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
                 self.datePicker.date = date;
             }
         }
+        
+        NSString *max = [WXConvert NSString:options[@"max"]];
+        if (max) {
+            NSDate *date = [WXUtility datetimeStringToDate:max];
+            if (date) {
+                self.datePicker.maximumDate =date;
+            }
+        }
+        
+        NSString *min = [WXConvert NSString:options[@"min"]];
+        if (min) {
+            NSDate *date = [WXUtility datetimeStringToDate:min];
+            if (date) {
+                self.datePicker.minimumDate =date;
+            }
+        }
+        
     }
     NSString  *confirmTitle;
     NSString  *cancelTitle;
