@@ -40,6 +40,7 @@
     
     UIView* result = [super hitTest:point withEvent:event];
     if (result) {
+        [result becomeFirstResponder];
         return result;
     }
     
@@ -55,6 +56,7 @@
         CGPoint subPoint = [self convertPoint:point toView:subView];
         result = [subView hitTest:subPoint withEvent:event];
         if (result) {
+            [result becomeFirstResponder];
             return result;
         }
     }
