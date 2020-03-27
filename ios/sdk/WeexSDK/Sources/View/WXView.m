@@ -43,6 +43,7 @@
         if (self.wx_component && self.wx_component->_eventPenetrationEnabled && result == self) {
             return nil;
         }
+        [result becomeFirstResponder];
         return result;
     }
     
@@ -58,6 +59,7 @@
         CGPoint subPoint = [self convertPoint:point toView:subView];
         result = [subView hitTest:subPoint withEvent:event];
         if (result) {
+            [result becomeFirstResponder];
             return result;
         }
     }
