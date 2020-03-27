@@ -43,7 +43,9 @@
         if (self.wx_component && self.wx_component->_eventPenetrationEnabled && result == self) {
             return nil;
         }
-        [result becomeFirstResponder];
+        if ([result isKindOfClass:[UITextField class]] || [result isKindOfClass:[UITextView class]]) {
+            [result becomeFirstResponder];
+        }
         return result;
     }
     
@@ -59,7 +61,9 @@
         CGPoint subPoint = [self convertPoint:point toView:subView];
         result = [subView hitTest:subPoint withEvent:event];
         if (result) {
-            [result becomeFirstResponder];
+            if ([result isKindOfClass:[UITextField class]] || [result isKindOfClass:[UITextView class]]) {
+                [result becomeFirstResponder];
+            }
             return result;
         }
     }
