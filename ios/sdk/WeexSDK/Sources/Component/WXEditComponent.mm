@@ -930,7 +930,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 #pragma mark keyboard
 - (void)keyboardWasShown:(NSNotification*)notification
 {
-    if(![self.view isFirstResponder]) {
+    if([self.view isFirstResponder]) {
         return;
     }
     
@@ -960,7 +960,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (void)keyboardWillHide:(NSNotification*)notification
 {
-    if (![self.view isFirstResponder] || _keyboardHidden) {
+    if ([self.view isFirstResponder] || _keyboardHidden) {
         return;
     }
     if (!_disableMoveViewUp) {
