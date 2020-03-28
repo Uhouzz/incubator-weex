@@ -199,7 +199,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         UIBarButtonItem *space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
         UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, 0, 44)];
         toolbar.items = [NSArray arrayWithObjects:space, barButton, nil];
-        
+
         self.inputAccessoryView = toolbar;
     }
 
@@ -930,7 +930,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 #pragma mark keyboard
 - (void)keyboardWasShown:(NSNotification*)notification
 {
-    if([self.view isFirstResponder]) {
+    if(![self.view isFirstResponder]) {
         return;
     }
     
@@ -960,7 +960,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (void)keyboardWillHide:(NSNotification*)notification
 {
-    if ([self.view isFirstResponder] || _keyboardHidden) {
+    if (![self.view isFirstResponder] || _keyboardHidden) {
         return;
     }
     if (!_disableMoveViewUp) {
