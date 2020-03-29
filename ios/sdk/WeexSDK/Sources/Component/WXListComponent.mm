@@ -582,8 +582,12 @@
         } else {
             WXLogInfo(@"Reload cell:%@ at indexPath:%@", cell.ref, indexPath);
             [UIView performWithoutAnimation:^{
-                [_tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone];
-                [self handleAppear];
+                UITableViewCell *cell = [_tableView cellForRowAtIndexPath:indexPath];
+                if (cell) {
+                    [_tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone];
+                    [self handleAppear];
+                }
+                
             }];
         }
     }];
