@@ -143,6 +143,7 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
     float _fontAscender;
     BOOL _truncationLine; // support trunk tail
     
+    NSArray *_highlightedContents;
     NSAttributedString * _ctAttributedString;
     NSString *_wordWrap;
     
@@ -305,6 +306,13 @@ do {\
     id text = [WXConvert NSString:attributes[@"value"]];
     if (text && ![self.text isEqualToString:text]) {
         self.text = text;
+        [self setNeedsRepaint];
+        [self setNeedsLayout];
+    }
+    
+    id highlightedContents = attributes[@"highlightedContents"];
+    if (highlightedContents && ![_highlightedContents isEqual:highlightedContents]) {
+        _highlightedContents = highlightedContents;
         [self setNeedsRepaint];
         [self setNeedsLayout];
     }
@@ -498,6 +506,22 @@ do {\
         [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:_color[0] green:_color[1] blue:_color[2] alpha:_color[3]] range:NSMakeRange(0, string.length)];
     }
     
+    // set highlightedContent
+    if ([_highlightedContents isKindOfClass:[NSArray class]]) {
+        for (NSDictionary *map in _highlightedContents) {
+            if (![map isKindOfClass:[NSDictionary class]]) {
+                break;
+            }
+            if (map[@"text"] && map[@"color"]) {
+                NSString *highlightedText = [WXConvert NSString:map[@"text"]];
+                UIColor *highlightedColor = [WXConvert UIColor:map[@"color"]];
+                if ([string rangeOfString:highlightedText].location != NSNotFound) {
+                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:[string rangeOfString:highlightedText]];
+                }
+            }
+        }
+    }
+    
     // set font
     UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
     CTFontRef ctFont;
@@ -584,6 +608,22 @@ do {\
     // set textColor
     if (_color[0] >= 0) {
         [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:_color[0] green:_color[1] blue:_color[2] alpha:_color[3]] range:NSMakeRange(0, string.length)];
+    }
+    
+    // set highlightedContent
+    if ([_highlightedContents isKindOfClass:[NSArray class]]) {
+        for (NSDictionary *map in _highlightedContents) {
+            if (![map isKindOfClass:[NSDictionary class]]) {
+                break;
+            }
+            if (map[@"text"] && map[@"color"]) {
+                NSString *highlightedText = [WXConvert NSString:map[@"text"]];
+                UIColor *highlightedColor = [WXConvert UIColor:map[@"color"]];
+                if ([string rangeOfString:highlightedText].location != NSNotFound) {
+                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:[string rangeOfString:highlightedText]];
+                }
+            }
+        }
     }
     
     // set font
