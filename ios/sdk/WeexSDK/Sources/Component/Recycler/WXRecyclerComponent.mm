@@ -144,6 +144,7 @@ typedef enum : NSUInteger {
             WXMultiColumnLayout *layout = (WXMultiColumnLayout *)_collectionViewlayout;
             layout.columnWidth = [WXConvert WXLength:attributes[@"columnWidth"] isFloat:YES scaleFactor:scaleFactor] ? : [WXLength lengthWithFloat:0.0 type:WXLengthTypeAuto];
             layout.columnCount = [WXConvert WXLength:attributes[@"columnCount"] isFloat:NO scaleFactor:1.0] ? : [WXLength lengthWithInt:1 type:WXLengthTypeFixed];
+            layout.minContentSizeHeight = [self _floatValueForColumnGap:([WXConvert WXLength:attributes[@"minSizeHeight"] isFloat:YES scaleFactor:scaleFactor] ? : [WXLength lengthWithFloat:0.0 type:WXLengthTypeNormal])];;
             if (attributes[@"leftGap"]) {
                 layout.leftGap = [WXConvert WXPixelType:attributes[@"leftGap"] scaleFactor:scaleFactor];
             }

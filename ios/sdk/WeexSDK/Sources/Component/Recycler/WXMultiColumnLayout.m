@@ -208,8 +208,7 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     if (numberOfSections == 0) {
         return CGSizeZero;
     }
-    
-    return CGSizeMake(self.contentWidth, self.contentHeight);
+    return CGSizeMake(self.contentWidth, MAX(self.contentHeight, self.minContentSizeHeight));
 }
 
 - (NSArray<UICollectionViewLayoutAttributes *> *)layoutAttributesForElementsInRect:(CGRect)rect

@@ -49,6 +49,7 @@ extern NSString * const kCollectionSupplementaryViewKindHeader;
 @property (nonatomic, assign) float rightGap;
 
 @property (nonatomic, assign) float columnGap;
+@property (nonatomic, assign) float minContentSizeHeight;
 
 @property (nonatomic, assign, readonly) CGFloat computedColumnWidth;
 @property (nonatomic, assign, readonly) int computedColumnCount;
