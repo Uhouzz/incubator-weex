@@ -973,9 +973,13 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (void)keyboardWillHide:(NSNotification*)notification
 {
-    if (![self.view isFirstResponder] || _keyboardHidden) {
+    if (_keyboardHidden) {
         return;
     }
+    
+    //搜狗有收起键盘收操作次数 输入框不会调用blur self.view 还是第一响应者 要做一次取消响应
+    [self.view resignFirstResponder];
+    
     if (!_disableMoveViewUp) {
         UIView * rootView = self.weexInstance.rootView;
         if (!CGRectEqualToRect(self.weexInstance.frame, rootView.frame)) {
