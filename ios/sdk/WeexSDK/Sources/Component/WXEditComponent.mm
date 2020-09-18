@@ -976,9 +976,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     if (_keyboardHidden) {
         return;
     }
-    
-    //搜狗有收起键盘收操作次数 输入框不会调用blur self.view 还是第一响应者 要做一次取消响应
-    [self.view resignFirstResponder];
+    //自定义键盘收起操作  输入框收起键盘的时候不会调用blur self.view 还是第一响应者 要做一次取消响应
+    if ([self.view isFirstResponder]) {
+        [self.view resignFirstResponder];
+    }
     
     if (!_disableMoveViewUp) {
         UIView * rootView = self.weexInstance.rootView;
