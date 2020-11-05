@@ -620,6 +620,15 @@ WX_EXPORT_METHOD(@selector(save:))
     }];
 }
 
+- (void)didFinishDrawingLayer:(BOOL)success {
+    if ([self isViewLoaded]) {
+        UIImage *image = ((UIImageView *)self.view).image;
+        if (image && !_layer.contents) {
+            _layer.contents = (id)(image.CGImage);
+        }
+    }
+}
+
 - (NSString*) _safeInstanceId
 {
     return self.weexInstance.instanceId ? : @"unknown";
