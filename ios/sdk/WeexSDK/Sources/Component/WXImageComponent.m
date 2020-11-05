@@ -36,18 +36,18 @@
 #import "WXMonitor.h"
 #import "WXSDKInstance_performance.h"
 
-@interface WXImageView : UIImageView
-
-@end
-
-@implementation WXImageView
-
-+ (Class)layerClass
-{
-    return [WXLayer class];
-}
-
-@end
+//@interface WXImageView : UIImageView
+//
+//@end
+//
+//@implementation WXImageView
+//
+//+ (Class)layerClass
+//{
+//    return [WXLayer class];
+//}
+//
+//@end
 
 static dispatch_queue_t WXImageUpdateQueue;
 
@@ -226,7 +226,7 @@ WX_EXPORT_METHOD(@selector(save:))
 
 - (UIView *)loadView
 {
-    return [[WXImageView alloc] init];
+    return [[UIImageView alloc] init];
 }
 
 - (void)addEvent:(NSString *)eventName {
@@ -618,15 +618,6 @@ WX_EXPORT_METHOD(@selector(save:))
             }
         });
     }];
-}
-
-- (void)didFinishDrawingLayer:(BOOL)success {
-    if ([self isViewLoaded]) {
-        UIImage *image = ((UIImageView *)self.view).image;
-        if (image && !_layer.contents) {
-            _layer.contents = (id)(image.CGImage);
-        }
-    }
 }
 
 - (NSString*) _safeInstanceId
