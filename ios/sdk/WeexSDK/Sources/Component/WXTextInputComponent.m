@@ -154,7 +154,11 @@
 {
     [_inputView setBorder:border];
 }
-
+-(void)setTextContentType:(UITextContentType)textContentType{
+    if (@available(iOS 12.0, *)) {
+        _inputView.textContentType  = textContentType;
+    }
+}
 -(void)setAttributedPlaceholder:(NSMutableAttributedString *)attributedString font:font
 {
     [_inputView setAttributedPlaceholder:attributedString];

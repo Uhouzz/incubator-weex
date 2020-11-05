@@ -44,6 +44,7 @@
 @property (nonatomic) UIReturnKeyType returnKeyType;
 @property (nonatomic) BOOL disabled;
 @property (nonatomic, copy) NSString *inputType;
+@property (nonatomic, copy) NSString *contentType;
 @property (nonatomic) NSUInteger rows;
 @property (nonatomic) BOOL hideDoneButton;
 
@@ -119,6 +120,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         
         if(attributes[@"type"]) {
             _inputType = [WXConvert NSString:attributes[@"type"]];
+            _attr = attributes;
+        }
+        if(attributes[@"contenttype"]) {
+            _contentType = [WXConvert NSString:attributes[@"contenttype"]];
             _attr = attributes;
         }
         if (attributes[@"maxlength"]) {
@@ -344,7 +349,9 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 -(void)setKeyboardType:(UIKeyboardType)keyboardType
 {
 }
+-(void)setTextContentType:(UITextContentType)textContentType{
 
+}
 -(void)setSecureTextEntry:(BOOL)secureTextEntry
 {
 }
@@ -859,6 +866,12 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     }
 }
 
+- (void)setTextContentType{
+    if ([_contentType isEqualToString:@"onetimecode"]) {
+        [self setTextContentType:UITextContentTypeOneTimeCode];
+    }
+}
+
 - (void)setType
 {
     [self setKeyboardType:UIKeyboardTypeDefault];
@@ -960,9 +973,14 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (void)keyboardWillHide:(NSNotification*)notification
 {
-    if (![self.view isFirstResponder] || _keyboardHidden) {
+    if (_keyboardHidden) {
         return;
     }
+    //自定义键盘收起操作  输入框收起键盘的时候不会调用blur self.view 还是第一响应者 要做一次取消响应
+    if ([self.view isFirstResponder]) {
+        [self.view resignFirstResponder];
+    }
+    
     if (!_disableMoveViewUp) {
         UIView * rootView = self.weexInstance.rootView;
         if (!CGRectEqualToRect(self.weexInstance.frame, rootView.frame)) {
