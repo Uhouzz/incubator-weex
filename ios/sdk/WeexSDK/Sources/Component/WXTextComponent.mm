@@ -515,8 +515,10 @@ do {\
             if (map[@"text"] && map[@"color"]) {
                 NSString *highlightedText = [WXConvert NSString:map[@"text"]];
                 UIColor *highlightedColor = [WXConvert UIColor:map[@"color"]];
-                if ([string rangeOfString:highlightedText].location != NSNotFound) {
-                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:[string rangeOfString:highlightedText]];
+        
+                NSRange range = [string rangeOfString:highlightedText options:NSCaseInsensitiveSearch];
+                if (range.location != NSNotFound) {
+                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:range];
                 }
             }
         }
@@ -619,8 +621,9 @@ do {\
             if (map[@"text"] && map[@"color"]) {
                 NSString *highlightedText = [WXConvert NSString:map[@"text"]];
                 UIColor *highlightedColor = [WXConvert UIColor:map[@"color"]];
-                if ([string rangeOfString:highlightedText].location != NSNotFound) {
-                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:[string rangeOfString:highlightedText]];
+                NSRange range = [string rangeOfString:highlightedText options:NSCaseInsensitiveSearch];
+                if (range.location != NSNotFound) {
+                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:range];
                 }
             }
         }
