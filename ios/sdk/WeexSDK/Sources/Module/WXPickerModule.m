@@ -440,9 +440,11 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
 {
     self.callback = callback;
     self.datePicker = [[UIDatePicker alloc]init];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130400
     if (@available(iOS 13.4, *)) {
         self.datePicker.preferredDatePickerStyle = UIDatePickerStyleWheels;
     }
+#endif
     if (options[@"localeId"]) {
         NSString  *localeId = [WXConvert NSString:options[@"localeId"]];
         [self.datePicker setLocale:[[NSLocale alloc] initWithLocaleIdentifier:localeId]];
