@@ -133,6 +133,8 @@
     //css_node_t *_scrollerCSSNode;
     
     NSHashTable* _delegates;
+    CGFloat _stickyHeaderInsetTop;
+    CGFloat _stickyHeaderOffsetY;
 }
 
 WX_EXPORT_METHOD(@selector(resetLoadmore))
@@ -201,6 +203,8 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
         _listenLoadMore = [events containsObject:@"loadmore"];
         _scrollable = attributes[@"scrollable"] ? [WXConvert BOOL:attributes[@"scrollable"]] : YES;
         _offsetAccuracy = attributes[@"offsetAccuracy"] ? [WXConvert WXPixelType:attributes[@"offsetAccuracy"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;
+        _stickyHeaderInsetTop = attributes[@"stickyHeaderInsetTop"] ? [WXConvert WXPixelType:attributes[@"stickyHeaderInsetTop"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;;
+        _stickyHeaderOffsetY = attributes[@"stickyHeaderOffsetY"] ? [WXConvert WXPixelType:attributes[@"stickyHeaderOffsetY"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;;
 
         /* let scroller fill the rest space if it is a child component and has no fixed height & width.
          WeexCore also does this in C++, but only for "scroller" and "list" not including for
@@ -349,6 +353,14 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     
     if (attributes[@"loadmoreoffset"]) {
         _loadMoreOffset = [WXConvert WXPixelType:attributes[@"loadmoreoffset"] scaleFactor:self.weexInstance.pixelScaleFactor];
+    }
+    
+    if (attributes[@"stickyHeaderInsetTop"]) {
+        _stickyHeaderInsetTop =[WXConvert WXPixelType:attributes[@"stickyHeaderInsetTop"] scaleFactor:self.weexInstance.pixelScaleFactor];
+    }
+    
+    if (attributes[@"stickyHeaderOffsetY"]) {
+        _stickyHeaderOffsetY =[WXConvert WXPixelType:attributes[@"stickyHeaderOffsetY"] scaleFactor:self.weexInstance.pixelScaleFactor];
     }
     
     if (attributes[@"bounce"]) {
@@ -792,7 +804,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     if (self.onScroll) {
         self.onScroll(scrollView);
     }
-    
     if (_scrollEvent || _scrollEventListener) {
         CGFloat distance = 0;
         if (_scrollDirection == WXScrollDirectionHorizontal) {
@@ -806,7 +817,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
             //contentOffset values are replaced by (-contentOffset.x,-contentOffset.y), in order to be consistent with Android client.
             NSDictionary *contentOffsetData = @{@"x": @(-scrollView.contentOffset.x / scaleFactor),
                                                 @"y": @(-scrollView.contentOffset.y / scaleFactor)};
-            
             if (_scrollEvent) {
                 [self fireEvent:@"scroll" params:@{@"contentSize":contentSizeData, @"contentOffset":contentOffsetData} domChanges:nil];
             }
@@ -823,8 +833,16 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
             [delegate scrollViewDidScroll:scrollView];
         }
     }
+    
+    //吸顶位置调整
+    if (_stickyHeaderOffsetY > 0 && _stickyHeaderInsetTop > 0) {
+        if (scrollView.contentOffset.y < _stickyHeaderOffsetY && scrollView.contentOffset.y >= 0) {
+            scrollView.contentInset = UIEdgeInsetsZero;
+        } else if (scrollView.contentOffset.y >= _stickyHeaderOffsetY) {
+            scrollView.contentInset = UIEdgeInsetsMake(_stickyHeaderInsetTop, 0, 0, 0);
+        }
+    }
 }
-
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
     [self dispatchScrollEndEvent:scrollView];
