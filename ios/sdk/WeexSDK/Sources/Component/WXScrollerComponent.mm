@@ -837,7 +837,9 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     //吸顶位置调整
     if (_stickyHeaderOffsetY > 0 && _stickyHeaderInsetTop > 0) {
         if (scrollView.contentOffset.y < _stickyHeaderOffsetY && scrollView.contentOffset.y >= 0) {
-            scrollView.contentInset = UIEdgeInsetsZero;
+            if (!UIEdgeInsetsEqualToEdgeInsets(scrollView.contentInset, UIEdgeInsetsZero)) {
+                scrollView.contentInset = UIEdgeInsetsZero;
+            }
         } else if (scrollView.contentOffset.y >= _stickyHeaderOffsetY) {
             scrollView.contentInset = UIEdgeInsetsMake(_stickyHeaderInsetTop, 0, 0, 0);
         }
