@@ -55,7 +55,7 @@
 @property (nonatomic, strong) NSString *fontFamily;
 @property (nonatomic, strong) UIColor *colorForStyle;
 @property (nonatomic)NSTextAlignment textAlignForStyle;
-
+@property (nonatomic)UITextAutocapitalizationType autocapitalizationType;
 //event
 @property (nonatomic) BOOL inputEvent;
 @property (nonatomic) BOOL clickEvent;
@@ -131,6 +131,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         }
         if (attributes[@"returnKeyType"]) {
             _returnKeyType = [WXConvert UIReturnKeyType:attributes[@"returnKeyType"]];
+        }
+        
+        if (attributes[@"autocaptype"]) {
+            _autocapitalizationType = [WXConvert UITextAutocapitalizationType:attributes[@"autocaptype"]];
         }
         if (attributes[@"rows"]) {
             _rows = [attributes[@"rows"] integerValue];
@@ -332,7 +336,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 -(void)setReturnKeyType:(UIReturnKeyType)returnKeyType
 {
 }
-
+-(void)setAutocapitalizationType:(UITextAutocapitalizationType)autocapitalizationType
+{
+    
+}
 -(void)setInputAccessoryView:(UIView *)inputAccessoryView
 {
 }
@@ -469,6 +476,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     if (attributes[@"returnKeyType"]) {
         _returnKeyType = [WXConvert UIReturnKeyType:attributes[@"returnKeyType"]];
         [self setReturnKeyType:_returnKeyType];
+    }
+    if (attributes[@"autocaptype"]) {
+        _autocapitalizationType = [WXConvert UITextAutocapitalizationType:attributes[@"autocaptype"]];
+        [self setAutocapitalizationType:_autocapitalizationType];
     }
     if (attributes[@"rows"]) {
         _rows = [attributes[@"rows"] integerValue];
@@ -886,6 +897,9 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         [self setKeyboardType:UIKeyboardTypeEmailAddress];
     }else if ([_inputType isEqualToString:@"url"]) {
         [self setKeyboardType:UIKeyboardTypeURL];
+    // 限制不能输入中文
+    }else if ([_inputType isEqualToString:@"ascllcapable"]) {
+        [self setKeyboardType:UIKeyboardTypeASCIICapable];
     }else if ([_inputType isEqualToString:@"number"]) {
         [self setKeyboardType:UIKeyboardTypeDecimalPad];
     }else if ([self isDateType]) {

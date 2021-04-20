@@ -532,6 +532,22 @@ WX_NUMBER_CONVERT(NSUInteger, unsignedIntegerValue)
     }
     return UIReturnKeyDefault;
 }
+// none(不自动大写)| words (单词首字母大写)| sentences(句子首字母大写) | allcharacters(所有祖母大写 )
++ (UITextAutocapitalizationType)UITextAutocapitalizationType:(id)value
+{
+    if([value isKindOfClass:[NSString class]]){
+        NSString *string = (NSString *)value;
+        if ([string isEqualToString:@"none"])
+            return UITextAutocapitalizationTypeNone;
+        else if ([string isEqualToString:@"words"])
+            return UITextAutocapitalizationTypeWords;
+        else if ([string isEqualToString:@"sentences"])
+            return UITextAutocapitalizationTypeSentences;
+        else if ([string isEqualToString:@"allcharacters"])
+            return UITextAutocapitalizationTypeAllCharacters;
+    }
+    return UITextAutocapitalizationTypeNone;
+}
 
 + (WXTextStyle)WXTextStyle:(id)value
 {
