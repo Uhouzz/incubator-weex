@@ -135,6 +135,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         
         if (attributes[@"autocaptype"]) {
             _autocapitalizationType = [WXConvert UITextAutocapitalizationType:attributes[@"autocaptype"]];
+            _attr = attributes;
         }
         if (attributes[@"rows"]) {
             _rows = [attributes[@"rows"] integerValue];
@@ -621,6 +622,12 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     _changeEventString = [textField text];
     if (_focusEvent) {
         [self fireEvent:@"focus" params:nil];
+    }
+    
+    if([_attr[@"autocaptype"] isEqualToString:@"autocaptype"]){
+        textField.secureTextEntry = NO;
+        textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
+        textField.autocorrectionType = UITextAutocorrectionTypeYes;
     }
     [self handlePseudoClass];
 }
