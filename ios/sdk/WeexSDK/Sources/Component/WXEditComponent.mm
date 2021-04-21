@@ -623,8 +623,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     if (_focusEvent) {
         [self fireEvent:@"focus" params:nil];
     }
-    
-    if([_attr[@"autocaptype"] isEqualToString:@"autocaptype"]){
+    if([_attr[@"autocaptype"] isEqualToString:@"allcharacters"]){
         textField.secureTextEntry = NO;
         textField.autocapitalizationType = UITextAutocapitalizationTypeAllCharacters;
         textField.autocorrectionType = UITextAutocorrectionTypeYes;
