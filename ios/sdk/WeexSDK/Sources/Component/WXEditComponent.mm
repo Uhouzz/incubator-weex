@@ -725,7 +725,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         }
     }
     //兼容第三方键盘 字母全部大写失效的情况
-    if([_attr[@"autocaptype"] isEqualToString:@"allcharacters"]){
+    if([_attr[@"autocaptype"] isEqualToString:@"allcharacters"] || self.autocapitalizationType == UITextAutocapitalizationTypeAllCharacters){
         textField.text = [textField.text uppercaseString];
     }
 
