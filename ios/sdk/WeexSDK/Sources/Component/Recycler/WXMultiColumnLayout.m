@@ -254,7 +254,7 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     CGFloat maxY = nextHeader ? (nextHeader.frame.origin.y - header.frame.size.height) : (CGRectGetMaxY(bounds) - header.frame.size.height);
     CGFloat currentY = CGRectGetMaxY(bounds) - bounds.size.height + [self weakCollectionView].contentInset.top;
     
-    CGFloat resultY = MIN(MAX(currentY, originY), maxY);
+    CGFloat resultY = originY > maxY ? originY : MIN(MAX(currentY, originY), maxY);
     CGPoint origin = header.frame.origin;
     origin.y = resultY;
     
