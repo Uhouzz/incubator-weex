@@ -354,6 +354,10 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
     return [self.items count];
 }
 
+- (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component API_UNAVAILABLE(tvos) {
+    return pickerView.bounds.size.width - 40;
+}
+
 - (CGFloat)pickerView:(UIPickerView *)pickerView rowHeightForComponent:(NSInteger)component
 {
     return 44.0f;
@@ -383,6 +387,8 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
         
         label= [[UILabel alloc] initWithFrame:CGRectMake(0.0f, 0.0f, [pickerView rowSizeForComponent:component].width, [pickerView rowSizeForComponent:component].height)];
         label.textAlignment = NSTextAlignmentCenter;
+        label.numberOfLines = 2;
+        label.adjustsFontSizeToFitWidth = YES;
         UIColor *color = self.textColor?self.textColor:[UIColor blackColor];
         label.textColor = color;
         label.text = [self convertItem:self.items[row]];
