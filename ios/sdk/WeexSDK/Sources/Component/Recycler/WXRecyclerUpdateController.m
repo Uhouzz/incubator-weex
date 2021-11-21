@@ -251,11 +251,14 @@
     
     [collectionView deleteItemsAtIndexPaths:[diffResult.deleteIndexPaths allObjects]];
     [collectionView insertItemsAtIndexPaths:[diffResult.insertIndexPaths allObjects]];
-    [collectionView reloadItemsAtIndexPaths:[reloadIndexPaths allObjects]];
+//    [collectionView reloadItemsAtIndexPaths:[reloadIndexPaths allObjects]];
     
     [collectionView deleteSections:diffResult.deleteSections];
     [collectionView insertSections:diffResult.insertSections];
-    [collectionView reloadSections:diffResult.reloadSections];
+//    [collectionView reloadSections:diffResult.reloadSections];
+    
+    [collectionView reloadData];
+    [collectionView.collectionViewLayout invalidateLayout];
 }
 
 @end
