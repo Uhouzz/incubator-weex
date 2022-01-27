@@ -59,13 +59,6 @@
     return NO;
 }
 
-//如果粘贴的内容不符合键盘限制内容，则粘贴不生效，业务需要故重写处理
-- (void)paste:(id)sender {
-    if ([[UIPasteboard generalPasteboard] hasStrings]) {
-        self.text = [self.text stringByAppendingString:[[UIPasteboard generalPasteboard] string]];
-    }
-}
-
 - (CGRect)editingRectForBounds:(CGRect)bounds
 {
     return [self textRectForBounds:bounds];
