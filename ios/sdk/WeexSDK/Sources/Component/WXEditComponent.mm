@@ -733,10 +733,6 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         // bind each other , the key must be attrs
         [self fireEvent:@"input" params:@{@"value":[textField text]} domChanges:@{@"attrs":@{@"value":[textField text]}}];
     }
-    
-    if (_blurEvent) {
-        [self fireEvent:@"blur" params:nil];
-    }
 }
 
 - (void)setViewMovedUp:(BOOL)movedUp
