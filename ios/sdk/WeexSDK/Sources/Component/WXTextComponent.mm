@@ -200,6 +200,9 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
     if (_fontFamily && _observerIconfont) {
         [[NSNotificationCenter defaultCenter] removeObserver:self name:WX_ICONFONT_DOWNLOAD_NOTIFICATION object:nil];
     }
+    if (_enableCopy) {
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:UIMenuControllerDidHideMenuNotification object:nil];
+    }
     pthread_mutex_destroy(&_ctAttributedStringMutex);
     pthread_mutexattr_destroy(&_propertMutexAttr);
 }
@@ -350,15 +353,22 @@ do {\
     if (_enableCopy) {
         UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(displayMenuController:)];
         [self.view addGestureRecognizer:longPress];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(hideMenuController:)
+                                                     name:UIMenuControllerDidHideMenuNotification
+                                                   object:nil];
     }
     self.view.isAccessibilityElement = YES;
     
     [self setNeedsDisplay];
 }
-
+- (void)hideMenuController:(id)sender{
+    self.view.backgroundColor = [UIColor whiteColor];
+}
 - (void)displayMenuController:(id)sender
 {
     if ([self.view becomeFirstResponder] && ((UILongPressGestureRecognizer*)sender).state == UIGestureRecognizerStateBegan) {
+        self.view.backgroundColor = [UIColor colorWithRed:196.0f/255.0f green:219.0f/255.0f blue:246.0f/255.0f alpha:0.9];//196 219 246
         UIMenuController *theMenu = [UIMenuController sharedMenuController];
         CGSize size = [self ctAttributedString].size;
         CGRect selectionRect = CGRectMake(self.view.frame.origin.x, self.view.frame.origin.y, size.width, size.height);
