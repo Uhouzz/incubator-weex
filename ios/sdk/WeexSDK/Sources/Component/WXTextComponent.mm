@@ -30,6 +30,23 @@
 #import <pthread/pthread.h>
 #import <CoreText/CoreText.h>
 
+@interface WXRichTextInfo : NSObject
+
+@property (nonatomic, assign) CGFloat fontWeight;
+@property (nonatomic, assign) CGFloat fontSize;
+@property (nonatomic, strong) UIColor *color;
+@property (nonatomic, assign) NSRange range;
+@property (nonatomic, copy) NSString *text;
+@property (nonatomic, copy) NSString *action;
+@property (nonatomic, copy) NSString *url;
+
+@end
+
+@implementation WXRichTextInfo
+
+
+@end
+
 // WXText is a non-public is not permitted
 @interface WXTextView : WXView
 @property (nonatomic, strong) NSTextStorage *textStorage;
@@ -120,6 +137,9 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
 
 @interface WXTextComponent()
 @property (nonatomic, strong) NSString *useCoreTextAttr;
+
+@property (nonatomic, strong) UITapGestureRecognizer *richTapGesture;
+
 @end
 
 @implementation WXTextComponent
@@ -143,7 +163,8 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
     float _fontAscender;
     BOOL _truncationLine; // support trunk tail
     
-    NSArray *_highlightedContents;
+    NSMutableArray *_richContentArray;
+    NSArray *_originalRichArray;
     NSAttributedString * _ctAttributedString;
     NSString *_wordWrap;
     
@@ -168,6 +189,7 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
         pthread_mutex_init(&(_ctAttributedStringMutex), &(_propertMutexAttr));
         
         _textAlign = NSTextAlignmentNatural;
+        _richContentArray = [NSMutableArray array];
         
         if ([attributes objectForKey:@"coretext"]) {
             _useCoreTextAttr = [WXConvert NSString:attributes[@"coretext"]];
@@ -193,6 +215,13 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
         return NO;
     }
     return YES;
+}
+
+-(UITapGestureRecognizer *)richTapGesture {
+    if (!_richTapGesture) {
+        _richTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onRichClick:)];
+    }
+    return _richTapGesture;
 }
 
 - (void)dealloc
@@ -311,11 +340,28 @@ do {\
     }
     
     id highlightedContents = attributes[@"highlightedContents"];
-    if (highlightedContents && ![_highlightedContents isEqual:highlightedContents]) {
-        _highlightedContents = highlightedContents;
+    if (highlightedContents && ![_originalRichArray isEqual:highlightedContents]) {
+        _originalRichArray = highlightedContents;
+        if (!_richTapGesture) {//添加点击手势
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.view addGestureRecognizer:self.richTapGesture];
+            });
+        }
+        [_richContentArray removeAllObjects];
+        for (NSDictionary *map in highlightedContents) {
+            WXRichTextInfo *info = [[WXRichTextInfo alloc] init];
+            info.text = [WXConvert NSString:map[@"text"]];
+            info.color = [WXConvert UIColor:map[@"color"]];
+            info.fontSize = [WXConvert WXPixelType:map[@"fontSize"] scaleFactor:self.weexInstance.pixelScaleFactor];
+            info.fontWeight = [WXConvert WXTextWeight:map[@"fontWeight"]];
+            info.action = [WXConvert NSString:map[@"action"]];
+            info.url = [WXConvert NSString:map[@"url"]];
+            [_richContentArray addObject:info];
+        }
         [self setNeedsRepaint];
         [self setNeedsLayout];
     }
+    
     if (attributes[@"enableCopy"]) {
         _enableCopy = [WXConvert BOOL:attributes[@"enableCopy"]];
     }
@@ -354,6 +400,114 @@ do {\
     self.view.isAccessibilityElement = YES;
     
     [self setNeedsDisplay];
+}
+
+- (void)onRichClick:(UITapGestureRecognizer *)sender {
+    CGPoint touchPoint = [sender locationInView:self.view];
+    WXRichTextInfo *result = [self linkAtCharacterIndex:[self characterIndexAtPoint:touchPoint]];
+    if (result.action) {
+        [self fireEvent:result.action params:@{
+            @"url":result.url,
+            @"text":result.text,
+        }];
+        return;
+    }
+}
+- (WXRichTextInfo *)linkAtCharacterIndex:(CFIndex)idx {
+    // Do not enumerate if the index is outside of the bounds of the text.
+    if (!NSLocationInRange((NSUInteger)idx, NSMakeRange(0, [self ctAttributedString].length))) {
+        return nil;
+    }
+
+    NSEnumerator *enumerator = [_richContentArray reverseObjectEnumerator];
+    WXRichTextInfo *link = nil;
+    while ((link = [enumerator nextObject])) {
+        if (NSLocationInRange((NSUInteger)idx, link.range)) {
+            return link;
+        }
+    }
+    return nil;
+}
+
+- (CFIndex)characterIndexAtPoint:(CGPoint)p {
+    if (!CGRectContainsPoint(self.view.bounds, p)) {
+        return NSNotFound;
+    }
+
+    CGRect textRect = self.view.bounds;
+    if (!CGRectContainsPoint(textRect, p)) {
+        return NSNotFound;
+    }
+    NSAttributedString * attributedStringCpy = [self ctAttributedString];
+    if (!attributedStringCpy) {
+        return NSNotFound;
+    }
+    // Offset tap coordinates by textRect origin to make them relative to the origin of frame
+    p = CGPointMake(p.x - textRect.origin.x, p.y - textRect.origin.y);
+    // Convert tap coordinates (start at top left) to CT coordinates (start at bottom left)
+    p = CGPointMake(p.x, textRect.size.height - p.y);
+    
+    CTFramesetterRef ctframesetterRef = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)(attributedStringCpy));
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPathAddRect(path, NULL, textRect);
+    CTFrameRef frame = CTFramesetterCreateFrame(ctframesetterRef, CFRangeMake(0, (CFIndex)[attributedStringCpy length]), path, NULL);
+
+    if (frame == NULL) {
+        CGPathRelease(path);
+        return NSNotFound;
+    }
+
+    CFArrayRef lines = CTFrameGetLines(frame);
+    NSInteger numberOfLines = _lines > 0 ? MIN(_lines, CFArrayGetCount(lines)) : CFArrayGetCount(lines);
+    if (numberOfLines == 0) {
+        CFRelease(frame);
+        CGPathRelease(path);
+        return NSNotFound;
+    }
+    
+    CFIndex idx = NSNotFound;
+    CGPoint lineOrigins[numberOfLines];
+    CTFrameGetLineOrigins(frame, CFRangeMake(0, numberOfLines), lineOrigins);
+    for (CFIndex lineIndex = 0; lineIndex < numberOfLines; lineIndex++) {
+        CGPoint lineOrigin = lineOrigins[lineIndex];
+        CTLineRef line = (CTLineRef)CFArrayGetValueAtIndex(lines, lineIndex);
+        // Get bounding information of line
+        CGFloat ascent = 0.0f, descent = 0.0f, leading = 0.0f;
+        CGFloat width = (CGFloat)CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
+        CGFloat yMin = (CGFloat)floor(lineOrigin.y - descent);
+        CGFloat yMax = (CGFloat)ceil(lineOrigin.y + ascent);
+    
+        // Apply penOffset using flushFactor for horizontal alignment to set lineOrigin since this is the horizontal offset from drawFramesetter
+        CGFloat flushFactor = 0;
+        switch (_textAlign) {
+            case NSTextAlignmentCenter:
+                flushFactor = 0.5;
+                break;
+            case NSTextAlignmentRight:
+                flushFactor = 1;
+                break;
+        }
+        CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, textRect.size.width);
+        lineOrigin.x = penOffset;
+        // Check if we've already passed the line
+        if (p.y > yMax) {
+            break;
+        }
+        // Check if the point is within this line vertically
+        if (p.y >= yMin) {
+            // Check if the point is within this line horizontally
+            if (p.x >= lineOrigin.x && p.x <= lineOrigin.x + width) {
+                // Convert CT coordinates to line-relative coordinates
+                CGPoint relativePoint = CGPointMake(p.x - lineOrigin.x, p.y - lineOrigin.y);
+                idx = CTLineGetStringIndexForPosition(line, relativePoint);
+                break;
+            }
+        }
+    }
+
+    CFRelease(frame);
+    CGPathRelease(path);
+    return idx;
 }
 
 - (void)displayMenuController:(id)sender
@@ -506,24 +660,6 @@ do {\
         [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:_color[0] green:_color[1] blue:_color[2] alpha:_color[3]] range:NSMakeRange(0, string.length)];
     }
     
-    // set highlightedContent
-    if ([_highlightedContents isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *map in _highlightedContents) {
-            if (![map isKindOfClass:[NSDictionary class]]) {
-                break;
-            }
-            if (map[@"text"] && map[@"color"]) {
-                NSString *highlightedText = [WXConvert NSString:map[@"text"]];
-                UIColor *highlightedColor = [WXConvert UIColor:map[@"color"]];
-        
-                NSRange range = [string rangeOfString:highlightedText options:NSCaseInsensitiveSearch];
-                if (range.location != NSNotFound) {
-                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:range];
-                }
-            }
-        }
-    }
-    
     // set font
     UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
     CTFontRef ctFont;
@@ -598,6 +734,28 @@ do {\
         [attributedString addAttribute:NSKernAttributeName value:@(_letterSpacing) range:(NSRange){0, attributedString.length}];
     }
     
+    // set highlightedContent
+    for (WXRichTextInfo *info in _richContentArray) {
+        if (info.text.length > 0) {
+            NSRange range = [string rangeOfString:info.text options:NSCaseInsensitiveSearch];
+            if (range.location != NSNotFound) {
+                info.range = range;
+                if (info.color) {
+                    [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
+                }
+                if (info.fontSize || info.fontWeight) {
+                    if (!info.fontSize) {
+                        info.fontSize = _fontSize;
+                    }
+                    if (!info.fontWeight) {
+                        info.fontWeight = _fontWeight;
+                    }
+                    UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+                    [attributedString addAttribute:NSFontAttributeName value:font range:range];
+                }
+            }
+        }
+    }
     return attributedString;
 }
 
@@ -611,24 +769,7 @@ do {\
     if (_color[0] >= 0) {
         [attributedString addAttribute:NSForegroundColorAttributeName value:[UIColor colorWithRed:_color[0] green:_color[1] blue:_color[2] alpha:_color[3]] range:NSMakeRange(0, string.length)];
     }
-    
-    // set highlightedContent
-    if ([_highlightedContents isKindOfClass:[NSArray class]]) {
-        for (NSDictionary *map in _highlightedContents) {
-            if (![map isKindOfClass:[NSDictionary class]]) {
-                break;
-            }
-            if (map[@"text"] && map[@"color"]) {
-                NSString *highlightedText = [WXConvert NSString:map[@"text"]];
-                UIColor *highlightedColor = [WXConvert UIColor:map[@"color"]];
-                NSRange range = [string rangeOfString:highlightedText options:NSCaseInsensitiveSearch];
-                if (range.location != NSNotFound) {
-                     [attributedString addAttribute:NSForegroundColorAttributeName value:highlightedColor range:range];
-                }
-            }
-        }
-    }
-    
+        
     // set font
     UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:_fontStyle fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor];
     if (font) {
@@ -672,6 +813,29 @@ do {\
         [attributedString addAttribute:NSParagraphStyleAttributeName
                                  value:paragraphStyle
                                  range:(NSRange){0, attributedString.length}];
+    }
+    
+    // set highlightedContent
+    for (WXRichTextInfo *info in _richContentArray) {
+        if (info.text.length > 0) {
+            NSRange range = [string rangeOfString:info.text options:NSCaseInsensitiveSearch];
+            if (range.location != NSNotFound) {
+                info.range = range;
+                if (info.color) {
+                    [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
+                }
+                if (info.fontSize || info.fontWeight) {
+                    if (!info.fontSize) {
+                        info.fontSize = _fontSize;
+                    }
+                    if (!info.fontWeight) {
+                        info.fontWeight = _fontWeight;
+                    }
+                    UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+                    [attributedString addAttribute:NSFontAttributeName value:font range:range];
+                }
+            }
+        }
     }
 
     return attributedString;
