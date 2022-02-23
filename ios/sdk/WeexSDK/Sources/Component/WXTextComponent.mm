@@ -345,12 +345,8 @@ do {\
     id highlightedContents = attributes[@"highlightedContents"];
     if (highlightedContents && ![_originalRichArray isEqual:highlightedContents]) {
         _originalRichArray = highlightedContents;
-        if (!_richTapGesture) {//添加点击手势
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self.view addGestureRecognizer:self.richTapGesture];
-            });
-        }
         [_richContentArray removeAllObjects];
+        BOOL addTapGesture = NO;
         for (NSDictionary *map in highlightedContents) {
             WXRichTextInfo *info = [[WXRichTextInfo alloc] init];
             info.text = [WXConvert NSString:map[@"text"]];
@@ -359,7 +355,15 @@ do {\
             info.fontWeight = [WXConvert WXTextWeight:map[@"fontWeight"]];
             info.action = [WXConvert NSString:map[@"action"]];
             info.url = [WXConvert NSString:map[@"url"]];
+            if (info.action) {
+                addTapGesture = YES;
+            }
             [_richContentArray addObject:info];
+        }
+        if (!_richTapGesture && addTapGesture) {//添加点击手势
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.view addGestureRecognizer:self.richTapGesture];
+            });
         }
         [self setNeedsRepaint];
         [self setNeedsLayout];
