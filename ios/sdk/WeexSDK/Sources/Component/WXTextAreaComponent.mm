@@ -48,6 +48,7 @@ typedef UITextView WXTextAreaView;
         self.placeHolderLabel.numberOfLines = 0;
         [_textView addSubview:self.placeHolderLabel];
     }
+    [self _updateTextContentInset];
     // default placeholder hide from voice over
     self.placeHolderLabel.isAccessibilityElement = NO;
     _textView.isAccessibilityElement = YES;
@@ -81,12 +82,7 @@ typedef UITextView WXTextAreaView;
             return CGSizeZero;
         }
         
-        __block CGFloat pointSize = 0;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            pointSize = strongSelf.textView.font.pointSize;
-        });
-        
-        CGSize computedSize = [[[NSString alloc] init]sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:pointSize]}];
+        CGSize computedSize = [[[NSString alloc] init]sizeWithAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:strongSelf.textView.font.pointSize]}];
         computedSize.height = strongSelf.rows ? computedSize.height * strongSelf.rows + (CorrectY + CorrectY/2):0;
             if (!isnan(strongSelf.flexCssNode->getMinWidth())) {
                 computedSize.width = MAX(computedSize.width, strongSelf.flexCssNode->getMinWidth());
