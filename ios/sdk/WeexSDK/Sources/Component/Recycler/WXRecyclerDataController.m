@@ -115,6 +115,11 @@
     return [sectionController isStickyForHeaderAtIndex:indexPath.item];
 }
 
+- (CGFloat)topOffsetForHeaderAtIndexPath:(NSIndexPath *)indexPath {
+    WXSectionDataController *sectionController = [self dataControllerForSection:indexPath.section];
+    return [sectionController topOffsetForHeaderAtIndex:indexPath.item];
+}
+
 - (NSIndexPath *)indexPathForCell:(WXCellComponent *)cell
 {
     return [_cellToIndexPathTable objectForKey:cell];

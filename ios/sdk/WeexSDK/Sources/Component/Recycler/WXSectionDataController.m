@@ -60,6 +60,10 @@
     return self.headerComponent.isSticky;
 }
 
+- (CGFloat)topOffsetForHeaderAtIndex:(NSInteger)index {
+    return self.headerComponent.topOffset;
+}
+
 - (NSUInteger)hash
 {
     return [super hash];

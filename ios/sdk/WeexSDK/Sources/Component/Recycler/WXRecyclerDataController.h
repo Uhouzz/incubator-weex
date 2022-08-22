@@ -40,6 +40,8 @@
 
 - (BOOL)isStickyForHeaderAtIndexPath:(NSIndexPath *)indexPath;
 
+- (CGFloat)topOffsetForHeaderAtIndexPath:(NSIndexPath *)indexPath;
+
 - (BOOL)hasHeaderInSection:(NSInteger)section;
 
 - (NSIndexPath *)indexPathForCell:(WXCellComponent *)cell;

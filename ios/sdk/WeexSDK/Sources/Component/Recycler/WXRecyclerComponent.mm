@@ -516,6 +516,12 @@ typedef enum : NSUInteger {
     return [self.dataController isStickyForHeaderAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:section]];
 }
 
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout topOffsetForHeaderInSection:(NSInteger)section
+{
+    return [self.dataController topOffsetForHeaderAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:section]];
+}
+
+
 #pragma mark - WXHeaderRenderDelegate
 
 - (float)headerWidthForLayout:(WXHeaderComponent *)header

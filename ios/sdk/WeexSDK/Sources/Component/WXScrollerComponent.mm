@@ -133,8 +133,6 @@
     //css_node_t *_scrollerCSSNode;
     
     NSHashTable* _delegates;
-    CGFloat _stickyHeaderInsetTop;
-    CGFloat _stickyHeaderOffsetY;
 }
 
 WX_EXPORT_METHOD(@selector(resetLoadmore))
@@ -203,9 +201,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
         _listenLoadMore = [events containsObject:@"loadmore"];
         _scrollable = attributes[@"scrollable"] ? [WXConvert BOOL:attributes[@"scrollable"]] : YES;
         _offsetAccuracy = attributes[@"offsetAccuracy"] ? [WXConvert WXPixelType:attributes[@"offsetAccuracy"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;
-        _stickyHeaderInsetTop = attributes[@"stickyHeaderInsetTop"] ? [WXConvert WXPixelType:attributes[@"stickyHeaderInsetTop"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;;
-        _stickyHeaderOffsetY = attributes[@"stickyHeaderOffsetY"] ? [WXConvert WXPixelType:attributes[@"stickyHeaderOffsetY"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;;
-
         /* let scroller fill the rest space if it is a child component and has no fixed height & width.
          WeexCore also does this in C++, but only for "scroller" and "list" not including for
          subclasses of WXScrollerComponent. */
@@ -353,14 +348,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     
     if (attributes[@"loadmoreoffset"]) {
         _loadMoreOffset = [WXConvert WXPixelType:attributes[@"loadmoreoffset"] scaleFactor:self.weexInstance.pixelScaleFactor];
-    }
-    
-    if (attributes[@"stickyHeaderInsetTop"]) {
-        _stickyHeaderInsetTop =[WXConvert WXPixelType:attributes[@"stickyHeaderInsetTop"] scaleFactor:self.weexInstance.pixelScaleFactor];
-    }
-    
-    if (attributes[@"stickyHeaderOffsetY"]) {
-        _stickyHeaderOffsetY =[WXConvert WXPixelType:attributes[@"stickyHeaderOffsetY"] scaleFactor:self.weexInstance.pixelScaleFactor];
     }
     
     if (attributes[@"bounce"]) {
@@ -831,17 +818,6 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     for (id<UIScrollViewDelegate> delegate in delegates) {
         if ([delegate respondsToSelector:@selector(scrollViewDidScroll:)]) {
             [delegate scrollViewDidScroll:scrollView];
-        }
-    }
-    
-    //吸顶位置调整
-    if (_stickyHeaderOffsetY > 0 && _stickyHeaderInsetTop > 0) {
-        if (scrollView.contentOffset.y < _stickyHeaderOffsetY && scrollView.contentOffset.y >= 0) {
-            if (!UIEdgeInsetsEqualToEdgeInsets(scrollView.contentInset, UIEdgeInsetsZero)) {
-                scrollView.contentInset = UIEdgeInsetsZero;
-            }
-        } else if (scrollView.contentOffset.y >= _stickyHeaderOffsetY) {
-            scrollView.contentInset = UIEdgeInsetsMake(_stickyHeaderInsetTop, 0, 0, 0);
         }
     }
 }

@@ -29,6 +29,7 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
 @interface WXMultiColumnLayoutHeaderAttributes : UICollectionViewLayoutAttributes
 
 @property (nonatomic, assign) BOOL isSticky;
+@property (nonatomic, assign) CGFloat topOffset;
 
 @end
 
@@ -163,9 +164,9 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
             WXMultiColumnLayoutHeaderAttributes *headerAttributes = [WXMultiColumnLayoutHeaderAttributes layoutAttributesForSupplementaryViewOfKind:kCollectionSupplementaryViewKindHeader withIndexPath:[NSIndexPath indexPathForItem:0 inSection:section]];
             headerAttributes.frame = CGRectMake(insets.left, currentHeight, self.contentWidth - (insets.left + insets.right), headerHeight);
             headerAttributes.isSticky = [self.delegate collectionView:[self weakCollectionView] layout:self isNeedStickyForHeaderInSection:section];
+            headerAttributes.topOffset = [self.delegate collectionView:[self weakCollectionView] layout:self topOffsetForHeaderInSection:section];
             headerAttributes.zIndex = headerAttributes.isSticky ? 1 : 0;
             headersAttributes[@(section)] = headerAttributes;
-            
             currentHeight = CGRectGetMaxY(headerAttributes.frame);
             [self _columnsReachToHeight:currentHeight];
         }
@@ -252,8 +253,7 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     CGRect bounds = [self weakCollectionView].bounds;
     CGFloat originY = header.frame.origin.y;
     CGFloat maxY = nextHeader ? (nextHeader.frame.origin.y - header.frame.size.height) : (CGRectGetMaxY(bounds) - header.frame.size.height);
-    CGFloat currentY = CGRectGetMaxY(bounds) - bounds.size.height + [self weakCollectionView].contentInset.top;
-    
+    CGFloat currentY = CGRectGetMaxY(bounds) - bounds.size.height + [self weakCollectionView].contentInset.top + header.topOffset;
     CGFloat resultY = originY > maxY ? originY : MIN(MAX(currentY, originY), maxY);
     CGPoint origin = header.frame.origin;
     origin.y = resultY;

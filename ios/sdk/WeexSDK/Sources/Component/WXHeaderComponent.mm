@@ -25,6 +25,7 @@
 @implementation WXHeaderComponent
 {
     BOOL _isUseContainerWidth;
+    CGFloat _topOffset;
 }
 
 - (instancetype)initWithRef:(NSString *)ref type:(NSString *)type styles:(NSDictionary *)styles attributes:(NSDictionary *)attributes events:(NSArray *)events weexInstance:(WXSDKInstance *)weexInstance
@@ -34,6 +35,7 @@
     if (self) {
         _async = YES;
         _keepScrollPosition = attributes[@"keepScrollPosition"] ? [WXConvert BOOL:attributes[@"keepScrollPosition"]] : NO;
+        _topOffset = attributes[@"topOffset"] ? [WXConvert WXPixelType:attributes[@"topOffset"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;
     }
     
     return self;
@@ -43,6 +45,9 @@
 {
     if (attributes[@"keepScrollPosition"]) {
         _keepScrollPosition = [WXConvert BOOL:attributes[@"keepScrollPosition"]];
+    }
+    if (attributes[@"topOffset"]) {
+        _topOffset = attributes[@"topOffset"] ? [WXConvert WXPixelType:attributes[@"topOffset"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;
     }
 }
 

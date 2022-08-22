@@ -36,6 +36,8 @@ extern NSString * const kCollectionSupplementaryViewKindHeader;
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout isNeedStickyForHeaderInSection:(NSInteger)section;
 
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout topOffsetForHeaderInSection:(NSInteger)section;
+
 @end
 
 @interface WXMultiColumnLayout : UICollectionViewLayout

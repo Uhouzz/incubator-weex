@@ -43,4 +43,6 @@
 
 - (BOOL)isStickyForHeaderAtIndex:(NSInteger)index;
 
+- (CGFloat)topOffsetForHeaderAtIndex:(NSInteger)index;
+
 @end
