@@ -83,7 +83,7 @@ typedef UITextView WXTextAreaView;
         }
         
         __block CGFloat pointSize = 0;
-        dispatch_sync(dispatch_get_main_queue(), ^{
+        WXPerformBlockSyncOnMainThread(^{
             pointSize = strongSelf.textView.font.pointSize;
         });
     
