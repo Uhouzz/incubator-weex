@@ -1272,6 +1272,10 @@ do {\
         return CGSizeMake(aWidth, suggestSize.height);
     }
     if (WX_SYS_VERSION_GREATER_THAN_OR_EQUAL_TO(@"14.0")) {
+        //fix only 1 line but get wrong heihgt.
+        if (_lines && actualLineCount == 1) {
+            return CGSizeMake(aWidth, suggestSize.height);
+        }
         if (lineCount <= 1) {
             return CGSizeMake(aWidth, totalHeight);
         }
