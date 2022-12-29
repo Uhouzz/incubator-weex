@@ -268,7 +268,7 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
 -(void)configPickerView
 {
     self.backgroundView = [self createbackgroundView];
-    UITapGestureRecognizer *tapGesture=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(hide)];
+    UITapGestureRecognizer *tapGesture=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(cancel:)];
     if (WX_SYS_VERSION_GREATER_THAN_OR_EQUAL_TO(@"11.0") && WX_SYS_VERSION_LESS_THAN(@"11.1")) {
         tapGesture.delegate = self;
     }
@@ -547,7 +547,7 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
 -(void)configDatePickerViewWithConfirmTitle:(NSString *)done cancelTitle:(NSString *)cancel
 {
     self.backgroundView = [self createbackgroundView];
-    UITapGestureRecognizer *tapGesture=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(hide)];
+    UITapGestureRecognizer *tapGesture=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(cancel:)];
     if (WX_SYS_VERSION_GREATER_THAN_OR_EQUAL_TO(@"11.0") && WX_SYS_VERSION_LESS_THAN(@"11.1")) {
         tapGesture.delegate = self;
     }
