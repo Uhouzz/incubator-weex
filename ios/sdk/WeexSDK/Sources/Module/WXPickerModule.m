@@ -74,12 +74,12 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
 {
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
 
-    if (nil != _backgroundView.superview) {
-        UIView* backgroundView =  _backgroundView;
-        dispatch_async(dispatch_get_main_queue(), ^{
+    WXPerformBlockSyncOnMainThread(^{
+        if (nil != _backgroundView.superview) {
+            UIView* backgroundView =  _backgroundView;
             [backgroundView removeFromSuperview];
-        });
-    }
+        }
+    });
 }
 
 -(void)pick:(NSDictionary *)options callback:(WXModuleKeepAliveCallback)callback
