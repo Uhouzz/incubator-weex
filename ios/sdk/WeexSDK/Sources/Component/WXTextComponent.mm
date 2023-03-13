@@ -32,13 +32,14 @@
 
 @interface WXRichTextInfo : NSObject
 
+@property (nonatomic, assign) WXTextDecoration textDecoration;
 @property (nonatomic, assign) CGFloat fontWeight;
 @property (nonatomic, assign) CGFloat fontSize;
 @property (nonatomic, strong) UIColor *color;
 @property (nonatomic, assign) NSRange range;
 @property (nonatomic, copy) NSString *text;
 @property (nonatomic, copy) NSString *action;
-@property (nonatomic, copy) NSString *url;
+@property (nonatomic, strong) NSDictionary *extra;
 
 @end
 
@@ -353,8 +354,9 @@ do {\
             info.color = [WXConvert UIColor:map[@"color"]];
             info.fontSize = [WXConvert WXPixelType:map[@"fontSize"] scaleFactor:self.weexInstance.pixelScaleFactor];
             info.fontWeight = [WXConvert WXTextWeight:map[@"fontWeight"]];
+            info.textDecoration = [WXConvert WXTextDecoration:map[@"textDecoration"]];
             info.action = [WXConvert NSString:map[@"action"]];
-            info.url = [WXConvert NSString:map[@"url"]];
+            info.extra = map[@"extra"];
             if (info.action) {
                 addTapGesture = YES;
             }
@@ -417,8 +419,9 @@ do {\
     CGPoint touchPoint = [sender locationInView:self.view];
     WXRichTextInfo *result = [self linkAtCharacterIndex:[self characterIndexAtPoint:touchPoint]];
     if (result.action) {
-        [self fireEvent:result.action params:@{
-            @"url":result.url,
+        [self fireEvent:@"richClick" params:@{
+            @"action":result.action,
+            @"extra":result.extra,
             @"text":result.text,
         }];
         return;
@@ -769,6 +772,12 @@ do {\
                     UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
                     [attributedString addAttribute:NSFontAttributeName value:font range:range];
                 }
+                
+                if(info.textDecoration == WXTextDecorationUnderline){
+                    [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:range];
+                } else if(info.textDecoration == WXTextDecorationLineThrough){
+                    [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:range];
+                }
             }
         }
     }
@@ -849,6 +858,11 @@ do {\
                     }
                     UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
                     [attributedString addAttribute:NSFontAttributeName value:font range:range];
+                }
+                if(info.textDecoration == WXTextDecorationUnderline){
+                    [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:range];
+                } else if(info.textDecoration == WXTextDecorationLineThrough){
+                    [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:range];
                 }
             }
         }
