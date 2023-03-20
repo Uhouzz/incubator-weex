@@ -139,8 +139,6 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
 @interface WXTextComponent()
 @property (nonatomic, strong) NSString *useCoreTextAttr;
 
-@property (nonatomic, strong) UITapGestureRecognizer *richTapGesture;
-
 @end
 
 @implementation WXTextComponent
@@ -173,6 +171,7 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
     pthread_mutexattr_t _propertMutexAttr;
     BOOL _observerIconfont;
     BOOL _enableCopy;
+    BOOL _enableRichTap;
 }
 
 - (instancetype)initWithRef:(NSString *)ref
@@ -216,13 +215,6 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
         return NO;
     }
     return YES;
-}
-
--(UITapGestureRecognizer *)richTapGesture {
-    if (!_richTapGesture) {
-        _richTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onRichClick:)];
-    }
-    return _richTapGesture;
 }
 
 - (void)dealloc
@@ -347,7 +339,6 @@ do {\
     if (highlightedContents && ![_originalRichArray isEqual:highlightedContents]) {
         _originalRichArray = highlightedContents;
         [_richContentArray removeAllObjects];
-        BOOL addTapGesture = NO;
         for (NSDictionary *map in highlightedContents) {
             WXRichTextInfo *info = [[WXRichTextInfo alloc] init];
             info.text = [WXConvert NSString:map[@"text"]];
@@ -357,15 +348,7 @@ do {\
             info.textDecoration = [WXConvert WXTextDecoration:map[@"textDecoration"]];
             info.action = [WXConvert NSString:map[@"action"]];
             info.extra = map[@"extra"];
-            if (info.action) {
-                addTapGesture = YES;
-            }
             [_richContentArray addObject:info];
-        }
-        if (!_richTapGesture && addTapGesture) {//添加点击手势
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self.view addGestureRecognizer:self.richTapGesture];
-            });
         }
         [self setNeedsRepaint];
         [self setNeedsLayout];
@@ -374,6 +357,11 @@ do {\
     if (attributes[@"enableCopy"]) {
         _enableCopy = [WXConvert BOOL:attributes[@"enableCopy"]];
     }
+    
+    if (attributes[@"enableRichTap"]) {
+        _enableRichTap = [WXConvert BOOL:attributes[@"enableRichTap"]];
+    }
+    
 }
 
 - (void)setNeedsRepaint
@@ -410,8 +398,13 @@ do {\
                                                      name:UIMenuControllerDidHideMenuNotification
                                                    object:nil];
     }
-    self.view.isAccessibilityElement = YES;
     
+    if (_enableRichTap) {
+        UITapGestureRecognizer *richTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onRichClick:)];
+        [self.view addGestureRecognizer:richTapGesture];
+    }
+    
+    self.view.isAccessibilityElement = YES;
     [self setNeedsDisplay];
 }
 
