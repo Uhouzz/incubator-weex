@@ -912,6 +912,8 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
         [self setKeyboardType:UIKeyboardTypeASCIICapable];
     }else if ([_inputType isEqualToString:@"number"]) {
         [self setKeyboardType:UIKeyboardTypeDecimalPad];
+    }else  if ([_inputType isEqualToString:@"numberPad"]) {
+        [self setKeyboardType:UIKeyboardTypeNumberPad];
     }else if ([self isDateType]) {
         if (!_datePickerManager) {
             _datePickerManager = [[WXDatePickerManager alloc] init];
