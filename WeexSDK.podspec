@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
                    A framework for building Mobile cross-platform UI
                    DESC
 
-  s.homepage     = "https://github.com/apache/incubator-weex"
+  s.homepage     = "https://github.com/alibaba/weex"
   s.license = {
     :type => 'Apache-2.0'
   }
@@ -21,12 +21,6 @@ Pod::Spec.new do |s|
                    }
   s.platform     = :ios
   s.ios.deployment_target = '9.0'
-
-  # use for public
-  # s.source =  {
-  #  :git => 'https://github.com/apache/incubator-weex.git',
-  #  :tag => #{s.version}
-  # }
 
   # use for playground
   s.source =  { :path => '.' }
@@ -69,9 +63,12 @@ Pod::Spec.new do |s|
                           'ios/sdk/WeexSDK/Sources/Controller/WXBaseViewController.h',
                           'ios/sdk/WeexSDK/Sources/Controller/WXRootViewController.h',
                           'ios/sdk/WeexSDK/Sources/Handler/WXNavigationDefaultImpl.h',
+                          'ios/sdk/WeexSDK/Sources/Handler/WXUnicornEventListenerHandler.h',
                           'ios/sdk/WeexSDK/Sources/View/WXView.h',
                           'ios/sdk/WeexSDK/Sources/View/WXErrorView.h',
                           'ios/sdk/WeexSDK/Sources/Protocol/*.h',
+                          'ios/sdk/WeexSDK/Sources/Plugin/WXEaglePluginManager.h',
+                          'ios/sdk/WeexSDK/Sources/Plugin/WXEaglePlugin.h',
                           'ios/sdk/WeexSDK/Sources/Network/WXResourceRequestHandler.h',
                           'ios/sdk/WeexSDK/Sources/Network/WXResourceRequest.h',
                           'ios/sdk/WeexSDK/Sources/Network/WXResourceResponse.h',
@@ -87,9 +84,9 @@ Pod::Spec.new do |s|
                           'ios/sdk/WeexSDK/Sources/Manager/WXHandlerFactory.h',
                           'ios/sdk/WeexSDK/Sources/Manager/WXComponentFactory.h',
                           'ios/sdk/WeexSDK/Sources/Manager/WXInvocationConfig.h',
+			  'ios/sdk/WeexSDK/Sources/Manager/WXModuleFactory.h',
                           'ios/sdk/WeexSDK/Sources/Engine/WXSDKEngine.h',
                           'ios/sdk/WeexSDK/Sources/Engine/WXSDKError.h',
-                          'ios/sdk/WeexSDK/Sources/Eagle/WXDataRenderHandler.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXConvert.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXUtility.h',
                           'ios/sdk/WeexSDK/Sources/Utility/WXConvertUtility.h',
@@ -104,7 +101,8 @@ Pod::Spec.new do |s|
                           'weex_core/Source/core/layout/flex_enum.h',
                           'weex_core/Source/core/layout/layout.h',
                           'weex_core/Source/core/layout/style.h',
-                          'weex_core/Source/core/bridge/eagle_bridge.h'
+                          'weex_core/Source/core/bridge/eagle_bridge.h',
+                          'weex_core/Source/core/render/page/reactor_page.h'
 
   s.module_map = 'WeexSDK.modulemap'
 
@@ -120,7 +118,7 @@ Pod::Spec.new do |s|
     'GCC_PREPROCESSOR_DEFINITIONS' => 'OS_IOS=1' }
 
   s.frameworks = 'CoreMedia','MediaPlayer','AVFoundation','AVKit','JavaScriptCore','GLKit','OpenGLES','CoreText','QuartzCore','CoreGraphics'
-  
+
   s.libraries = 'c++'
 
 end

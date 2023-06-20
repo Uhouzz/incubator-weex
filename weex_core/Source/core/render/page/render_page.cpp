@@ -338,8 +338,6 @@ bool RenderPage::UpdateStyle(
   if (src != nullptr) {
     src->clear();
     src->shrink_to_fit();
-    delete src;
-    src = nullptr;
   }
 
   if (style != nullptr) {
@@ -395,8 +393,6 @@ bool RenderPage::UpdateAttr(
   if (attrs != nullptr) {
     attrs->clear();
     attrs->shrink_to_fit();
-    delete attrs;
-    attrs = nullptr;
   }
 
   return true;
@@ -804,5 +800,13 @@ bool RenderPage::ReapplyStyles() {
   Batch();
   return true;
 }
-  
+void RenderPage::set_is_dirty(bool dirty) {
+    this->is_dirty_.store(dirty);
+#if OS_ANDROID
+    WeexCore::WeexCoreManager::Instance()->
+        getPlatformBridge()->
+        platform_side()->SetPageDirty(this->page_id().c_str(),dirty);
+#endif
+}
+
 }  // namespace WeexCore

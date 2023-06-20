@@ -90,24 +90,6 @@ static jstring ExecJSOnInstance(JNIEnv *env, jobject jcaller,
 
 static void onInteractionTimeUpdate(JNIEnv *env, jobject jcaller, jstring instanceId);
 
-static void FireEventOnDataRenderNode(JNIEnv *env, jobject jcaller,
-                                      jstring instanceId,
-                                      jstring ref,
-                                      jstring type,
-                                      jstring data,
-                                      jstring domChanges);
-
-static void InvokeCallbackOnDataRender(JNIEnv *env, jobject jcaller,
-                                       jstring instanceId,
-                                       jstring callbackId,
-                                       jstring data,
-                                       jboolean keepAlive);
-
-static void RegisterModuleOnDataRenderNode(JNIEnv *env, jobject jcaller,
-                                           jstring data);
-
-static void RegisterComponentOnDataRenderNode(JNIEnv *env, jobject jcaller,
-                                              jstring data);
 static void TakeHeapSnapshot(JNIEnv *env, jobject jcaller,
                              jstring filename);
 
@@ -367,6 +349,30 @@ instanceId,
 
 }
 
+static intptr_t g_WXBridge_setPageDirty = 0;
+static void Java_WXBridge_setPageDirty(JNIEnv *env, jobject obj, jstring
+page_id, jboolean dirty) {
+  /* Must call RegisterNativesImpl()  */
+  //CHECK_CLAZZ(env, obj,
+  //    WXBridge_clazz(env));
+  jmethodID method_id =
+      base::android::GetMethod(
+          env, WXBridge_clazz(env),
+          base::android::INSTANCE_METHOD,
+          "setPageDirty",
+          "("
+          "Ljava/lang/String;"
+          "Z"
+          ")"
+          "V",
+          &g_WXBridge_setPageDirty);
+
+  env->CallVoidMethod(obj,
+                      method_id, page_id, dirty);
+  base::android::CheckException(env);
+}
+
+
 static intptr_t g_WXBridge_setTimeoutNative = 0;
 static void Java_WXBridge_setTimeoutNative(JNIEnv *env, jobject obj, jstring
 callbackId,
@@ -379,7 +385,6 @@ callbackId,
           env, WXBridge_clazz(env),
           base::android::INSTANCE_METHOD,
           "setTimeoutNative",
-
           "("
           "Ljava/lang/String;"
           "Ljava/lang/String;"
@@ -1213,33 +1218,6 @@ static const JNINativeMethod kMethodsWXBridge[] = {
      "Ljava/lang/String;"
      ")"
      "V", reinterpret_cast<void *>(onInteractionTimeUpdate)},
-    {"nativeFireEventOnDataRenderNode",
-     "("
-     "Ljava/lang/String;"
-     "Ljava/lang/String;"
-     "Ljava/lang/String;"
-     "Ljava/lang/String;"
-     "Ljava/lang/String;"
-     ")"
-     "V", reinterpret_cast<void *>(FireEventOnDataRenderNode)},
-    {"nativeInvokeCallbackOnDataRender",
-     "("
-     "Ljava/lang/String;"
-     "Ljava/lang/String;"
-     "Ljava/lang/String;"
-     "Z"
-     ")"
-     "V", reinterpret_cast<void *>(InvokeCallbackOnDataRender)},
-    {"nativeRegisterModuleOnDataRenderNode",
-     "("
-     "Ljava/lang/String;"
-     ")"
-     "V", reinterpret_cast<void *>(RegisterModuleOnDataRenderNode)},
-    {"nativeRegisterComponentOnDataRenderNode",
-     "("
-     "Ljava/lang/String;"
-     ")"
-     "V", reinterpret_cast<void *>(RegisterComponentOnDataRenderNode)},
     {"nativeTakeHeapSnapshot",
      "("
      "Ljava/lang/String;"

@@ -215,6 +215,14 @@
     _tableView.estimatedRowHeight = 0;
     _tableView.estimatedSectionFooterHeight = 0;
     _tableView.estimatedSectionHeaderHeight = 0;
+    
+#if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 150000)
+    /// __IPHONE_15_0 Adaptation
+    if (@available(iOS 15.0, *)) {
+        _tableView.prefetchingEnabled = false;
+        _tableView.sectionHeaderTopPadding = 0;
+    }
+#endif
 }
 
 - (void)viewWillUnload
@@ -627,7 +635,8 @@
     NSIndexPath *fromIndexPath = [self indexPathForCell:cell sections:_sections];
     NSIndexPath *toIndexPath = [self indexPathForSubIndex:index];
     if (toIndexPath.row > [_sections[toIndexPath.section].rows count] || toIndexPath.row < 0) {
-        WXLogError(@"toIndexPath %@ is out of range as the current is %lu",toIndexPath ,(unsigned long)[_sections[toIndexPath.section].rows count]);
+    //FIXME: WXLogError trigger crash
+//        WXLogError(@"toIndexPath %@ is out of range as the current is %lu",toIndexPath ,(unsigned long)[_sections[toIndexPath.section].rows count]);
         return;
     }
     [self removeCellForIndexPath:fromIndexPath withSections:_sections];

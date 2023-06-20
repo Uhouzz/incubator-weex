@@ -40,12 +40,14 @@ extern "C" {
 
 @interface WXBridgeManager : NSObject
 
-+ (instancetype)sharedManager;
-
 /**
  *  return instance at the top of the stack.
  **/
 @property (nonatomic, weak, readonly) WXSDKInstance *topInstance;
+
+@property (nonatomic, strong) NSMutableDictionary *lastMethodInfo;
+
++ (instancetype)sharedManager;
 
 /**
  *  Create Instance Method
@@ -246,7 +248,13 @@ extern "C" {
 
 - (void)callJSMethod:(NSString *)method args:(NSArray *)args;
 
+- (void)callJSMethod:(NSString *)method args:(NSArray *)args completion:(void (^ _Nullable)(JSValue * _Nullable))completion;
+
 - (void)executeJSTaskQueue;
+
+- (void)checkJSThread;
+
++ (NSThread *)jsThread;
 
 @end
 

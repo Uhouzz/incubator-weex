@@ -24,6 +24,7 @@ FOUNDATION_EXPORT double WeexSDKVersionNumber;
 FOUNDATION_EXPORT const unsigned char WeexSDKVersionString[];
 
 #import <WeexSDK/style.h>
+#import <WeexSDK/reactor_page.h>
 #import <WeexSDK/layout.h>
 #import <WeexSDK/flex_enum.h>
 #import <WeexSDK/eagle_bridge.h>
@@ -32,6 +33,8 @@ FOUNDATION_EXPORT const unsigned char WeexSDKVersionString[];
 #import <WeexSDK/WXView.h>
 #import <WeexSDK/WXValidateProtocol.h>
 #import <WeexSDK/WXUtility.h>
+#import <WeexSDK/WXUnicornRenderProtocol.h>
+#import <WeexSDK/WXUnicornEventListenerHandler.h>
 #import <WeexSDK/WXURLRewriteProtocol.h>
 #import <WeexSDK/WXType.h>
 #import <WeexSDK/WXStreamModule.h>
@@ -49,6 +52,7 @@ FOUNDATION_EXPORT const unsigned char WeexSDKVersionString[];
 #import <WeexSDK/WXResourceLoader.h>
 #import <WeexSDK/WXRefreshComponent.h>
 #import <WeexSDK/WXRecyclerComponent.h>
+#import <WeexSDK/WXReactorProtocol.h>
 #import <WeexSDK/WXPrerenderManager.h>
 #import <WeexSDK/WXPageEventNotifyEvent.h>
 #import <WeexSDK/WXNetworkProtocol.h>
@@ -56,6 +60,7 @@ FOUNDATION_EXPORT const unsigned char WeexSDKVersionString[];
 #import <WeexSDK/WXNavigationDefaultImpl.h>
 #import <WeexSDK/WXMonitor.h>
 #import <WeexSDK/WXModuleProtocol.h>
+#import <WeexSDK/WXModuleFactory.h>
 #import <WeexSDK/WXModalUIModule.h>
 #import <WeexSDK/WXLog.h>
 #import <WeexSDK/WXListComponent.h>
@@ -70,9 +75,10 @@ FOUNDATION_EXPORT const unsigned char WeexSDKVersionString[];
 #import <WeexSDK/WXExceptionUtils.h>
 #import <WeexSDK/WXEventModuleProtocol.h>
 #import <WeexSDK/WXErrorView.h>
+#import <WeexSDK/WXEaglePluginManager.h>
+#import <WeexSDK/WXEaglePlugin.h>
 #import <WeexSDK/WXDefine.h>
 #import <WeexSDK/WXDebugTool.h>
-#import <WeexSDK/WXDataRenderHandler.h>
 #import <WeexSDK/WXConvertUtility.h>
 #import <WeexSDK/WXConvert.h>
 #import <WeexSDK/WXConfigCenterProtocol.h>

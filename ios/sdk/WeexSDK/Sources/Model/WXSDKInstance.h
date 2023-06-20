@@ -26,9 +26,12 @@
 #import <WeexSDK/WXApmForInstance.h>
 #import <WeexSDK/WXComponentManager.h>
 
+
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const bundleUrlOptionKey;
+
+typedef BOOL (^WXModuleInterceptCallback)(NSString *moduleName, NSString *methodName, NSArray *arguments, NSDictionary *options);
 
 @interface WXSDKInstance : NSObject
 
@@ -117,6 +120,11 @@ extern NSString *const bundleUrlOptionKey;
 @property (nonatomic, strong) NSDictionary* containerInfo;
 
 /**
+* Params for Canal
+**/
+@property (nonatomic, strong) NSMutableDictionary* canalParams;
+
+/**
  * Whether this instance is rendered or not. Please MUST not render an instance twice even if you have called destroyInstance.
  **/
 @property (nonatomic, assign, readonly) BOOL isRendered;
@@ -193,16 +201,6 @@ typedef enum : NSUInteger {
  * bundleType is the DSL type
  */
 @property (nonatomic, strong) NSString * bundleType;
-
-/**
- *  Which decide whether to use data render,default value is false
- */
-@property (nonatomic, assign, readonly) BOOL dataRender;
-
-/**
- *  Which decide whether to use binary code render, default value is false
- */
-@property (nonatomic, assign, readonly) BOOL wlasmRender;
     
 /**
  *  The callback triggered when the instance fails to render.
@@ -394,6 +392,11 @@ typedef enum : NSUInteger {
 - (NSURL *)completeURL:(NSString *)url;
 
 /**
+* register jscontext for reactor
+*/
+- (void)registerReactorContext:(JSContext*)context;
+
+/**
  * jsbundle str ,may be nil (weak)
  */
 - (NSString* _Nullable) bundleTemplate;
@@ -434,7 +437,7 @@ typedef enum : NSUInteger {
 /**
  * Set specific required page width and height to prevent this page using global values.
  */
-- (void)setPageRequiredWidth:(CGFloat)width height:(CGFloat)height;
+- (BOOL)setPageRequiredWidth:(CGFloat)width height:(CGFloat)height;
 
 /**
  * Set specific required view port width prevent this page using global value (750px).
@@ -446,6 +449,41 @@ typedef enum : NSUInteger {
  Useful fot debugging and fixing online bugs.
  */
 + (NSDictionary*)lastPageInfo;
+
+#pragma mark - Scheme Support
+
+typedef enum : NSUInteger {
+    WXAutoInvertingBehaviorDefault,
+    WXAutoInvertingBehaviorAlways,
+    WXAutoInvertingBehaviorNever,
+} WXAutoInvertingBehavior;
+
+/**
+ Set auto-inverting behavior for dark scheme.
+    WXAutoInvertingBehaviorDefault: Use components attribute and
+        defaultInvertValueForRootComponent of WXDarkSchemeProtocol.
+    WXAutoInvertingBehaviorAlways: Always set 'autoInvertForDarkScheme' as
+        true for root component.
+    WXAutoInvertingBehaviorNever: Always set 'autoInvertForDarkScheme' as
+        false for root component.
+ 
+ This function should be called before rendering URL.
+
+ @return Handler instance.
+*/
+- (void)setAutoInvertingBehavior:(WXAutoInvertingBehavior)behavior;
+
+/**
+ register/unRegister module intercept
+ */
+- (void)registerModuleIntercept:(NSString*)moduleName callBack:(WXModuleInterceptCallback)callback;
+- (void)unRegisterModuleIntercept:(NSString*)moduleName;
+
+/**
+ call module intercept
+ */
+- (BOOL)moduleInterceptWithModuleName:(NSString*)moduleName methodName:(NSString*)methodName arguments:(NSArray*)arguments options:(NSDictionary*)options;
+
 
 /** 
  * Deprecated 

@@ -34,9 +34,12 @@
 #import "WXThreadSafeMutableArray.h"
 #import "WXComponentManager.h"
 #import "WXCoreBridge.h"
-#import "WXDataRenderHandler.h"
 #import "WXHandlerFactory.h"
 #import "WXUtility.h"
+#import "WXExceptionUtils.h"
+#import "WXSDKEngine.h"
+#import "WXConfigCenterProtocol.h"
+#import "WXReactorProtocol.h"
 
 @interface WXBridgeManager ()
 
@@ -46,6 +49,7 @@
 @property (nonatomic, strong) WXBridgeContext *backupBridgeCtx;
 @property (nonatomic, strong) WXThreadSafeMutableArray *instanceIdStack;
 @property (nonatomic, strong) NSMutableArray* jsTaskQueue;
+@property (nonatomic, strong) NSTimer *timer;
 
 @end
 
@@ -71,8 +75,18 @@ static NSThread *WXBackupBridgeThread;
         _bridgeCtx = [[WXBridgeContext alloc] init];
         _supportMultiJSThread = NO;
         _jsTaskQueue = [NSMutableArray array];
+        _timer = nil;
+        _lastMethodInfo = [NSMutableDictionary dictionary];
     }
     return self;
+}
+
+- (WXBridgeContext *)bridgeCtx {
+    if (_bridgeCtx) {
+        return _bridgeCtx;
+    }
+    _bridgeCtx = [[WXBridgeContext alloc] init];
+    return _bridgeCtx;
 }
 
 - (WXBridgeContext *)backupBridgeCtx {
@@ -120,7 +134,7 @@ static NSThread *WXBackupBridgeThread;
         [WXBridgeThread setQualityOfService:[[NSThread mainThread] qualityOfService]];
         [WXBridgeThread start];
     });
-    
+
     return WXBridgeThread;
 }
 
@@ -618,23 +632,10 @@ void WXPerformBlockSyncOnBridgeThreadForInstance(void (^block) (void), NSString*
 - (void)fireEvent:(NSString *)instanceId ref:(NSString *)ref type:(NSString *)type params:(NSDictionary *)params domChanges:(NSDictionary *)domChanges handlerArguments:(NSArray *)handlerArguments
 {
     WXSDKInstance *instance = [WXSDKManager instanceForID:instanceId];
-    if (instance.dataRender) {
-        id<WXDataRenderHandler> dataRenderHandler = [WXHandlerFactory handlerForProtocol:@protocol(WXDataRenderHandler)];
-        if (dataRenderHandler) {
-            WXPerformBlockOnComponentThread(^{
-                [dataRenderHandler fireEvent:instanceId ref:ref event:type args:params?:@{} domChanges:domChanges?:@{}];
-            });
-        }
-        else {
-            WXComponentManager *manager = instance.componentManager;
-            if (manager.isValid) {
-                WXSDKErrCode errorCode = WX_KEY_EXCEPTION_DEGRADE_EAGLE_RENDER_ERROR;
-                NSError *error = [NSError errorWithDomain:WX_ERROR_DOMAIN code:errorCode userInfo:@{@"message":@"No data render handler found!"}];
-                WXPerformBlockOnComponentThread(^{
-                    [manager renderFailed:error];
-                });
-            }
-        }
+    if (instance.renderPlugin.isSupportFireEvent) {
+        WXPerformBlockOnComponentThread(^{
+            [instance.renderPlugin fireEvent:instanceId ref:ref event:type args:params?:@{} domChanges:domChanges?:@{}];
+        });
         return;
     }
 
@@ -642,7 +643,16 @@ void WXPerformBlockSyncOnBridgeThreadForInstance(void (^block) (void), NSString*
         WXLogError(@"Event type and component ref should not be nil");
         return;
     }
-    
+    if (instance.useReactor) {
+        id<WXReactorProtocol> reactorHandler = [WXHandlerFactory handlerForProtocol:NSProtocolFromString(@"WXReactorProtocol")];
+        if (reactorHandler) {
+            [reactorHandler fireEvent:instanceId ref:ref event:type args:params?:@{} domChanges:domChanges?:@{}];
+        } else {
+            WXLogError(@"There is no reactor handler");
+        }
+        return;
+    }
+
     NSArray *args = @[ref, type, params?:@{}, domChanges?:@{}];
     if (handlerArguments) {
         NSMutableArray *newArgs = [args mutableCopy];
@@ -700,26 +710,20 @@ void WXPerformBlockSyncOnBridgeThreadForInstance(void (^block) (void), NSString*
         args = @[[funcId copy], params? [params copy]:@"\"{}\""];
     }
     WXSDKInstance *instance = [WXSDKManager instanceForID:instanceId];
-    if (instance.wlasmRender) {
-        id<WXDataRenderHandler> dataRenderHandler = [WXHandlerFactory handlerForProtocol:@protocol(WXDataRenderHandler)];
-        if (dataRenderHandler) {
-            id strongArgs = params ? [params copy]:@"\"{}\"";
-            WXPerformBlockOnComponentThread(^{
-                [dataRenderHandler invokeCallBack:instanceId function:funcId args:strongArgs keepAlive:keepAlive];
-            });
-        }
-        else {
-            WXComponentManager *manager = instance.componentManager;
-            if (manager.isValid) {
-                WXSDKErrCode errorCode = WX_KEY_EXCEPTION_DEGRADE_EAGLE_RENDER_ERROR;
-                NSError *error = [NSError errorWithDomain:WX_ERROR_DOMAIN code:errorCode userInfo:@{@"message":@"No data render handler found!"}];
-                WXPerformBlockOnComponentThread(^{
-                    [manager renderFailed:error];
-                });
-            }
-        }
+    if (instance.renderPlugin.isSupportInvokeJSCallBack) {
+        id strongArgs = params ? [params copy]:@"\"{}\"";
+        WXPerformBlockOnComponentThread(^{
+            [instance.renderPlugin invokeCallBack:instanceId function:funcId args:strongArgs keepAlive:keepAlive];
+        });
     }
-    else {
+    else if (instance.useReactor) {
+        id<WXReactorProtocol> reactorHandler = [WXHandlerFactory handlerForProtocol:NSProtocolFromString(@"WXReactorProtocol")];
+        if (reactorHandler) {
+            [reactorHandler invokeCallBack:instanceId function:funcId args:args];
+        } else {
+            WXLogError(@"There is no reactor handler");
+        }
+    } else {
         WXCallJSMethod *method = [[WXCallJSMethod alloc] initWithModuleName:@"jsBridge" methodName:@"callback" arguments:args instance:instance];
         [self callJsMethod:method];
     }
@@ -765,8 +769,7 @@ void WXPerformBlockSyncOnBridgeThreadForInstance(void (^block) (void), NSString*
     });
 }
 
-- (void)callJSMethod:(NSString *)method args:(NSArray *)args
-{
+- (void)callJSMethod:(NSString *)method args:(NSArray *)args completion:(void (^)(JSValue *))completion {
     if (!method) return;
 
     __weak typeof(self) weakSelf = self;
@@ -774,8 +777,48 @@ void WXPerformBlockSyncOnBridgeThreadForInstance(void (^block) (void), NSString*
     WXPerformBlockOnBridgeThreadForInstance(^(){
         WXSDKInstance* sdkInstance = [WXSDKManager instanceForID:instanceId];
         WXBridgeContext* context = sdkInstance && sdkInstance.useBackupJsThread ? weakSelf.backupBridgeCtx :  weakSelf.bridgeCtx;
-        [context callJSMethod:method args:args onContext:nil completion:nil];
+        [context callJSMethod:method args:args onContext:nil completion:completion];
     }, instanceId);
+}
+
+- (void)callJSMethod:(NSString *)method args:(NSArray *)args {
+    [self callJSMethod:method args:args completion:nil];
+}
+
+#pragma mark JS Thread Check
+- (void)checkJSThread {
+    if (!_timer) {
+        id configCenter = [WXSDKEngine handlerForProtocol:@protocol(WXConfigCenterProtocol)];
+        if ([configCenter respondsToSelector:@selector(configForKey:defaultValue:isDefault:)]) {
+            BOOL enableCheckJSThread = [[configCenter configForKey:@"iOS_weex_ext_config.enable_check_js_thread" defaultValue:@(YES) isDefault:NULL] boolValue];
+            if (enableCheckJSThread) {
+                _timer = [NSTimer scheduledTimerWithTimeInterval:5.0f target:self selector:@selector(_postTaskToBridgeThread) userInfo:nil repeats:YES];
+            }
+        }
+    }
+}
+
+- (void)_postTaskToBridgeThread {
+    __block BOOL taskFinished = NO;
+    WXPerformBlockOnBridgeThread(^{
+        taskFinished = YES;
+    });
+
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (!weakSelf) {
+            return;
+        }
+        if (!taskFinished) {
+            WXSDKErrCode errorCode = WX_KEY_EXCEPTION_JS_THREAD_BLOCK;
+            WXSDKInstance* instance = weakSelf.topInstance;
+            if (!instance) {
+                return;
+            }
+            NSString *instanceId = instance.instanceId;
+            [WXExceptionUtils commitCriticalExceptionRT:instanceId errCode:[NSString stringWithFormat:@"%d", errorCode] function:@"" exception:@"JS Thread is block" extParams:weakSelf.lastMethodInfo];
+        }
+    });
 }
 
 #pragma mark - Deprecated

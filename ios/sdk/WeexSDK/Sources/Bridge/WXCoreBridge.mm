@@ -300,12 +300,12 @@ namespace WeexCore
                     if ([object isKindOfClass:[NSString class]]) {
                         returnValue->type = ParamsType::BYTEARRAYSTRING;
                         const char *pcstr_utf8 = [(NSString *)object UTF8String];
-                        returnValue->value.byteArray = generator_bytes_array(pcstr_utf8, ((NSString *)object).length);
+                        returnValue->value.byteArray = generator_bytes_array(pcstr_utf8, [(NSString *)object lengthOfBytesUsingEncoding:NSUTF8StringEncoding]);
                     }
                     if ([object isKindOfClass:[NSDictionary class]] || [object isKindOfClass:[NSArray class]]) {
                         NSString *jsonString = [WXUtility JSONString:object];
                         returnValue->type = ParamsType::BYTEARRAYJSONSTRING;
-                        returnValue->value.byteArray = generator_bytes_array(jsonString.UTF8String, jsonString.length);
+                        returnValue->value.byteArray = generator_bytes_array(jsonString.UTF8String, [jsonString lengthOfBytesUsingEncoding:NSUTF8StringEncoding]);
                     }
                     break;
                 }
@@ -1529,6 +1529,7 @@ break; \
 
 static WeexCore::PlatformBridge* platformBridge = nullptr;
 static WeexCore::ScriptBridge* jsBridge = nullptr;
+static UnicornRenderFunc unicornRenderFunction = nullptr;
 
 + (void)install
 {
@@ -1559,6 +1560,9 @@ static WeexCore::ScriptBridge* jsBridge = nullptr;
 #else
         weex::base::LogImplement::getLog()->setDebugMode(false);
 #endif
+
+        Class UnicornRenderClass = NSClassFromString(@"UnicornRender");
+        unicornRenderFunction = [(id<WXUnicornRenderProtocol>)UnicornRenderClass getRenderFunc];
         
         platformBridge = new WeexCore::PlatformBridge();
         platformBridge->set_platform_side(new WeexCore::IOSSide());
@@ -1570,6 +1574,8 @@ static WeexCore::ScriptBridge* jsBridge = nullptr;
         WeexCore::WeexCoreManager::Instance()->set_script_bridge(jsBridge);
         
         WeexCore::WeexCoreManager::Instance()->set_measure_function_adapter(new WeexCore::WXCoreMeasureFunctionBridge());
+
+        [[WXSDKManager bridgeMgr] checkJSThread];
     });
 }
 
@@ -1819,9 +1825,9 @@ static WeexCore::ScriptBridge* jsBridge = nullptr;
     return nullptr;
 }
 
-+ (std::vector<std::pair<std::string, std::string>>*)_parseMapValuePairs:(NSDictionary *)data
++ (std::unique_ptr<std::vector<std::pair<std::string, std::string>>>)_parseMapValuePairs:(NSDictionary *)data
 {
-    std::vector<std::pair<std::string, std::string>>* result = new std::vector<std::pair<std::string, std::string>>();
+    __block std::unique_ptr<std::vector<std::pair<std::string, std::string>>> result = std::make_unique<std::vector<std::pair<std::string, std::string>>>();
     [data enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
         ConvertToCString(obj, ^(const char * value) {
             if (value != nullptr) {
@@ -1829,7 +1835,7 @@ static WeexCore::ScriptBridge* jsBridge = nullptr;
             }
         });
     }];
-    return result;
+    return std::move(result);
 }
 
 + (void)callAddElement:(NSString*)pageId parentRef:(NSString*)parentRef data:(NSDictionary*)data index:(int)index
@@ -1875,13 +1881,13 @@ static WeexCore::ScriptBridge* jsBridge = nullptr;
 + (void)callUpdateAttrs:(NSString*)pageId ref:(NSString*)ref data:(NSDictionary*)data
 {
     SetConvertCurrentPage(pageId);
-    WeexCore::RenderManager::GetInstance()->UpdateAttr([pageId UTF8String] ?: "", [ref UTF8String] ?: "", [self _parseMapValuePairs:data]);
+    WeexCore::RenderManager::GetInstance()->UpdateAttr([pageId UTF8String] ?: "", [ref UTF8String] ?: "", [self _parseMapValuePairs:data].get());
 }
 
 + (void)callUpdateStyle:(NSString*)pageId ref:(NSString*)ref data:(NSDictionary*)data
 {
     SetConvertCurrentPage(pageId);
-    WeexCore::RenderManager::GetInstance()->UpdateStyle([pageId UTF8String] ?: "", [ref UTF8String] ?: "", [self _parseMapValuePairs:data]);
+    WeexCore::RenderManager::GetInstance()->UpdateStyle([pageId UTF8String] ?: "", [ref UTF8String] ?: "", [self _parseMapValuePairs:data].get());
 }
 
 + (void)callAddEvent:(NSString*)pageId ref:(NSString*)ref event:(NSString*)event
@@ -1926,6 +1932,28 @@ static WeexCore::ScriptBridge* jsBridge = nullptr;
         return NO;
     }
     return static_cast<RenderPage*>(page)->reserve_css_styles();
+}
+
++ (void)callUnicornRenderAction:(NSString*)instanceId
+                         module:(const char*)module
+                         method:(const char*)method
+                        context:(JSContext*)context
+                           args:(JSValueRef[])args
+                       argCount:(int)argCount {
+  std::unique_ptr<JSValueRef[]> values = std::unique_ptr<JSValueRef[]>(new JSValueRef[argCount]);
+  for (int i = 0; i < argCount; i ++) {
+    values[i] = args[i];
+  }
+  if (!unicornRenderFunction) {
+      Class UnicornRenderClass = NSClassFromString(@"UnicornRender");
+      unicornRenderFunction = [(id<WXUnicornRenderProtocol>)UnicornRenderClass getRenderFunc];
+  }
+  unicornRenderFunction([instanceId UTF8String],
+                        module,
+                        method,
+                        context.JSGlobalContextRef,
+                        values.get(),
+                        argCount);
 }
 
 @end

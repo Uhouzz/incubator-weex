@@ -42,6 +42,7 @@
 #import "WXComponent_performance.h"
 #import "WXAnalyzerCenter.h"
 #import "WXDisplayLinkManager.h"
+#import "WXSDKInstance_private.h"
 
 static NSThread *WXComponentThread;
 
@@ -68,6 +69,7 @@ static NSThread *WXComponentThread;
 
 #define WXAssertComponentExist(component)  WXAssert(component, @"component not exists")
 #define MAX_DROP_FRAME_FOR_BATCH   200
+#define SYNC_UI_EXCEPTION_LOG_INTERVAL 1000
 
 @interface WXComponentManager () <WXDisplayLinkClient>
 @end
@@ -919,6 +921,9 @@ static NSThread *WXComponentThread;
     [self _addUITask:^{
         UIView *rootView = instance.rootView;
         [instance.performance onInstanceRenderSuccess:instance];
+        if ([instance.renderPlugin.pluginName isEqualToString:@"EagleRax"]) {
+            [instance.apmInstance forceSetInteractionTime:[WXUtility getUnixFixTimeMillis]];
+        }
         if (instance.renderFinish) {
             instance.renderFinish(rootView);
         }
@@ -1121,7 +1126,15 @@ static NSThread *WXComponentThread;
         if (blocks.count) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 for(dispatch_block_t block in blocks) {
-                    block();
+                    @try {
+                        block();
+                    } @catch (NSException *exception) {
+                        static NSInteger sCatchCount = 0;
+                        if (++sCatchCount % SYNC_UI_EXCEPTION_LOG_INTERVAL == 1) {
+                            // log for the first time and control interval
+                            WXLogError(@"SyncUI Exception:%@", exception);
+                        }
+                    }
                 }
             });
         }

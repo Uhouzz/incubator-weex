@@ -34,7 +34,7 @@ extern NSString* const KEY_PAGE_PROPERTIES_JSLIB_VERSION;
 extern NSString* const KEY_PAGE_PROPERTIES_WEEX_VERSION;
 extern NSString* const KEY_PAGE_PROPERTIES_REQUEST_TYPE;
 extern NSString* const KEY_PAGE_PROPERTIES_Z_CACHE_INFO;
-extern NSString* const KEY_PAGE_PROPERTIES_GREY_BUNDLE;
+extern NSString* const KEY_PAGE_PROPERTIES_AIR_TAG;
 extern NSString* const KEY_PAGE_PROPERTIES_JS_FM_INIT;
 extern NSString* const KEY_PAGE_PROPERTIES_BUNDLE_TYPE;
 extern NSString* const KEY_PAGE_PROPERTIES_CONTAINER_NAME;
@@ -46,6 +46,7 @@ extern NSString* const KEY_PAGE_PROPERTIES_UIKIT_TYPE;
 
 ///************** stages *****************/
 extern NSString* const KEY_PAGE_STAGES_START;
+extern NSString* const KEY_PAGE_STAGES_CONTAINER_READY;
 extern NSString* const KEY_PAGE_STAGES_DOWN_BUNDLE_START;
 extern NSString* const KEY_PAGE_STAGES_DOWN_BUNDLE_END;
 extern NSString* const KEY_PAGE_STAGES_DOWN_JS_START;
@@ -63,6 +64,10 @@ extern NSString* const KEY_PAGE_STAGES_FSRENDER;
 extern NSString* const KEY_PAGE_STAGES_NEW_FSRENDER;
 extern NSString* const KEY_PAGE_STAGES_INTERACTION;
 extern NSString* const KEY_PAGE_STAGES_DESTROY;
+extern NSString* const KEY_PAGE_STAGES_CREATE_INSTANCE_START;
+extern NSString* const KEY_PAGE_STAGES_CREATE_INSTANCE_END;
+extern NSString* const KEY_PAGE_UNICORN_ENGINE_INIT_START;
+extern NSString* const KEY_PAGE_UNICORN_ENGINE_INIT_END;
 
 ///************** stats *****************/
 extern NSString* const KEY_PAGE_STATS_BUNDLE_SIZE;
@@ -125,6 +130,7 @@ extern NSString* const VALUE_ERROR_CODE_DEFAULT;
 @property (nonatomic, assign) BOOL isDownLoadFailed;
 @property (nonatomic, assign) BOOL forceStopRecordInteractionTime;
 @property (nonatomic,assign) double pageRatio;
+@property (nonatomic, copy) NSString* airInfo;
 @property (nonatomic,strong) NSMutableDictionary<NSString*,NSNumber*>* recordStatsMap;
 @property (nonatomic,strong) NSMutableDictionary<NSString*,NSNumber*>* recordStageMap;
 

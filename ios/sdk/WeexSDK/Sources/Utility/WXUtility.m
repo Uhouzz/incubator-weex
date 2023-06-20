@@ -43,6 +43,8 @@
 #define KEY_USERNAME_PASSWORD  @"com.taobao.Weex.weex123456"
 
 static BOOL enableRTLLayoutDirection = YES;
+static BOOL enableAdaptiveLayout = NO;
+static long intervalTime = 0;
 
 void WXPerformBlockOnMainThread(void (^ _Nonnull block)(void))
 {
@@ -385,7 +387,6 @@ CGFloat WXFloorPixelValue(CGFloat value)
         return true;
     }
     if (![string isKindOfClass:[NSString class]]) {
-        WXLogError(@"%@ is not a string", string);
         return true;
     }
     if ([[string stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] length] == 0) {
@@ -781,6 +782,10 @@ CGFloat WXFloorPixelValue(CGFloat value)
     return defaultScaleFactor;
 }
 
++ (BOOL)deviceIsiPad {
+    return [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad;
+}
+
 #pragma mark - RTL
 
 + (void)setEnableRTLLayoutDirection:(BOOL)value
@@ -791,6 +796,19 @@ CGFloat WXFloorPixelValue(CGFloat value)
 + (BOOL)enableRTLLayoutDirection
 {
     return enableRTLLayoutDirection;
+}
+
+
+#pragma mark - Adapt iPad
+
++ (void)setEnableAdaptiveLayout:(BOOL)value
+{
+    enableAdaptiveLayout = value;
+}
+
++ (BOOL)enableAdaptiveLayout
+{
+    return enableAdaptiveLayout;
 }
 
 #pragma mark - get deviceID
@@ -1058,8 +1076,13 @@ BOOL WXFloatGreaterThanWithPrecision(CGFloat a, CGFloat b ,double precision){
     
     dispatch_once(&unixTimeToken, ^{
         sInterval = [[NSDate date] timeIntervalSince1970] * 1000 - CACurrentMediaTime()*1000;
+        intervalTime = sInterval;
     });
     return sInterval+CACurrentMediaTime()*1000;
+}
+
++ (long)getIntervalTime {
+    return intervalTime;
 }
 
 + (NSArray<NSString *> *)extractPropertyNamesOfJSValueObject:(JSValue *)jsvalue

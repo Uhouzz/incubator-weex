@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -17,13 +17,20 @@
  * under the License.
  */
 
-#import <Foundation/Foundation.h>
+#import "WXUnicornEventListenerHandler.h"
 
-@protocol WXDestroyProtocol <NSObject>
+#import "WXSDKManager.h"
 
-/**
- *  @abstract execute unload function before dealloc
- */
-- (void)unload;
+@implementation WXUnicornEventListenerHandler
+
++ (void)fireEvent:(NSDictionary *)args {
+    NSMutableDictionary* eventParams = [args[@"params"] mutableCopy];
+    NSTimeInterval timeSp = [[NSDate date] timeIntervalSince1970] * 1000;
+    [eventParams setObject:@(timeSp) forKey:@"timestamp"];
+    NSDictionary* domChanges = [args[@"domChanges"] copy];
+    [[WXSDKManager bridgeMgr] fireEvent:args[@"pageId"] ref:args[@"ref"] type:args[@"type"] params:eventParams domChanges:domChanges?:@{}];
+}
 
 @end
+
+

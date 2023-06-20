@@ -281,6 +281,11 @@ _Nonnull SEL WXSwizzledSelectorForSelector(_Nonnull SEL selector);
  */
 + (CGFloat)defaultPixelScaleFactor;
 
+/**
+ * @return true if the device is iPad
+ */
++ (BOOL)deviceIsiPad;
+
 #if defined __cplusplus
 extern "C" {
 #endif
@@ -512,11 +517,24 @@ BOOL WXFloatGreaterThanWithPrecision(CGFloat a,CGFloat b,double precision);
  */
 + (NSData *_Nonnull)base64DictToData:(NSDictionary *_Nullable)base64Dict;
 
+/**
+*  @abstract Switch for RTL.
+*
+*/
 + (void)setEnableRTLLayoutDirection:(BOOL)value;
-
 + (BOOL)enableRTLLayoutDirection;
 
+
+/**
+*  @abstract Switch for adapt iPad.
+*
+*/
++ (void)setEnableAdaptiveLayout:(BOOL)value;
++ (BOOL)enableAdaptiveLayout;
+
 + (long) getUnixFixTimeMillis;
+
++ (long)getIntervalTime;
 
 + (NSArray<NSString *> *_Nullable)extractPropertyNamesOfJSValueObject:(JSValue *_Nullable)jsvalue;
 

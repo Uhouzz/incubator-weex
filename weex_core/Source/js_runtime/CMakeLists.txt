@@ -53,7 +53,7 @@ add_definitions(-DLOG_JS_DEBUG=0)
 add_definitions(-DUSE_JS_RUNTIME=1)
 
 
-add_definitions(-DUSE_SYSTEM_MALLOC=1)
+add_definitions(-DUSE_SYSTEM_MALLOC=0)
 if (${ANDROID_PLATFORM} STREQUAL "android-21")
 else ()
     add_definitions(-D_POSIX_THREAD_KEYS_MAX=128)                              
@@ -73,8 +73,11 @@ elseif ("${ANDROID_ABI}" STREQUAL "armeabi-v7a")
 elseif("${ANDROID_ABI}" STREQUAL "arm64-v8a")
     add_definitions(-DWTF_CPU_ARM64)
     set(WTF_CPU_ARM64 1)
-else ()
+elseif("${ANDROID_ABI}" STREQUAL "x86")
     add_definitions(-DWTF_CPU_X86)
+    set(WTF_CPU_X86 1)
+elseif("${ANDROID_ABI}" STREQUAL "x86_64")
+    add_definitions(-DWTF_CPU_X86_64)
     set(WTF_CPU_X86_64 1)
 endif ()
 
@@ -168,6 +171,8 @@ set(${WEEXJSSERVER_NAME}_SOURCES
         ${WEEX_CORE_SOURCE_DIR}/android/jsengine/object/args.cpp
         ${WEEX_CORE_SOURCE_DIR}/android/jsengine/object/weex_env.h
         ${WEEX_CORE_SOURCE_DIR}/android/jsengine/object/weex_env.cpp
+        ${WEEX_CORE_SOURCE_DIR}/android/jsengine/object/js_action.h
+        ${WEEX_CORE_SOURCE_DIR}/android/jsengine/object/js_action.cpp
 
         weex/task/impl/init_framework_task.cpp
         weex/task/impl/create_app_context_task.cpp
@@ -181,6 +186,7 @@ set(${WEEXJSSERVER_NAME}_SOURCES
         weex/task/impl/exe_js_services_task.cpp
         weex/task/impl/exe_js_on_instance_task.cpp
         weex/task/impl/exe_js_task.cpp
+        weex/task/impl/js_action_task.cpp
         weex/task/impl/take_heap_snapshot.cpp
         weex/task/impl/native_timer_task.cpp
         weex/task/impl/update_init_framework_params_task.cpp

@@ -946,7 +946,9 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
 
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
-    [_loadingComponent.view setHidden:NO];
+    if ([_loadingComponent displayState]) {
+        [_loadingComponent.view setHidden:NO];
+    }
     [_refreshComponent.view setHidden:NO];
     
     //refresh

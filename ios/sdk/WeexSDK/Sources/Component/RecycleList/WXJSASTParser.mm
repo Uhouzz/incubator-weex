@@ -427,7 +427,7 @@ static int binaryPrecedence(WXJSToken *token)
                             
                             // 3 digits are only allowed when string starts
                             // with 0, 1, 2, 3
-                            if (std::string(1, '0123').find(ch) != std::string::npos &&
+                            if (std::string("0123").find(ch) != std::string::npos &&
                                 _index < _length &&
                                 isOctalDigit(_source[_index])) {
                                 code = code * 8 + _source[_index++] - '0';
@@ -760,7 +760,7 @@ static int binaryPrecedence(WXJSToken *token)
 
 - (WXJSExpression *)parsePrimaryExpression
 {
-    int type = _lookahead->type;
+    WXJSTokenType type = _lookahead->type;
     
     if (type == WXJSTokenTypePunctuator) {
         if (_lookahead->value == "[") {
