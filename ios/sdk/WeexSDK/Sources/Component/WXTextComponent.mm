@@ -36,7 +36,7 @@
 @property (nonatomic, assign) CGFloat fontWeight;
 @property (nonatomic, assign) CGFloat fontSize;
 @property (nonatomic, strong) UIColor *color;
-@property (nonatomic, assign) NSRange range;
+@property (nonatomic, strong) NSMutableArray *ranges;
 @property (nonatomic, copy) NSString *text;
 @property (nonatomic, copy) NSString *action;
 @property (nonatomic, strong) NSDictionary *extra;
@@ -420,16 +420,24 @@ do {\
         return;
     }
 }
-- (WXRichTextInfo *)linkAtCharacterIndex:(CFIndex)idx {
+- (WXRichTextInfo *)linkAtCharacterIndex:(CFIndex)characterIdx {
     // Do not enumerate if the index is outside of the bounds of the text.
-    if (!NSLocationInRange((NSUInteger)idx, NSMakeRange(0, [self ctAttributedString].length))) {
+    if (!NSLocationInRange((NSUInteger)characterIdx, NSMakeRange(0, [self ctAttributedString].length))) {
         return nil;
     }
-
-    NSEnumerator *enumerator = [_richContentArray reverseObjectEnumerator];
+    
+    NSEnumerator *enumerator = [_richContentArray objectEnumerator];
     WXRichTextInfo *link = nil;
     while ((link = [enumerator nextObject])) {
-        if (NSLocationInRange((NSUInteger)idx, link.range)) {
+        __block BOOL found = NO;
+        [link.ranges enumerateObjectsUsingBlock:^(NSValue *value, NSUInteger idx, BOOL * _Nonnull stop) {
+            NSRange range = [value rangeValue];
+            if (NSLocationInRange((NSUInteger)characterIdx, range)) {
+                *stop = YES;
+                found = YES;
+            }
+        }];
+        if (found) {
             return link;
         }
     }
@@ -747,34 +755,48 @@ do {\
     }
     
     // set highlightedContent
+    [self setupHighlightedContent:attributedString];
+ 
+    return attributedString;
+}
+- (void)setupHighlightedContent:(NSMutableAttributedString *)attributedString {
+    NSString *originalString = attributedString.string;
     for (WXRichTextInfo *info in _richContentArray) {
         if (info.text.length > 0) {
-            NSRange range = [string rangeOfString:info.text options:NSCaseInsensitiveSearch];
-            if (range.location != NSNotFound) {
-                info.range = range;
-                if (info.color) {
-                    [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
-                }
-                if (info.fontSize || info.fontWeight) {
-                    if (!info.fontSize) {
-                        info.fontSize = _fontSize;
+            NSUInteger searchStartIndex = 0;
+            NSMutableArray<NSValue *> *ranges = [NSMutableArray array];
+
+            while (searchStartIndex < originalString.length) {
+                NSRange range = [originalString rangeOfString:info.text options:NSCaseInsensitiveSearch range:NSMakeRange(searchStartIndex, originalString.length - searchStartIndex)];
+                if (range.location != NSNotFound) {
+                    [ranges addObject:[NSValue valueWithRange:range]];
+                    if (info.color) {
+                        [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
                     }
-                    if (!info.fontWeight) {
-                        info.fontWeight = _fontWeight;
+                    if (info.fontSize || info.fontWeight) {
+                        if (!info.fontSize) {
+                            info.fontSize = _fontSize;
+                        }
+                        if (!info.fontWeight) {
+                            info.fontWeight = _fontWeight;
+                        }
+                        UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+                        [attributedString addAttribute:NSFontAttributeName value:font range:range];
                     }
-                    UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
-                    [attributedString addAttribute:NSFontAttributeName value:font range:range];
-                }
-                
-                if(info.textDecoration == WXTextDecorationUnderline){
-                    [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:range];
-                } else if(info.textDecoration == WXTextDecorationLineThrough){
-                    [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:range];
+                    
+                    if(info.textDecoration == WXTextDecorationUnderline){
+                        [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:range];
+                    } else if(info.textDecoration == WXTextDecorationLineThrough){
+                        [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:range];
+                    }
+                    searchStartIndex = NSMaxRange(range);
+                } else {
+                    break;
                 }
             }
+            info.ranges = ranges;
         }
     }
-    return attributedString;
 }
 
 - (NSAttributedString *)buildAttributeString
@@ -834,33 +856,7 @@ do {\
     }
     
     // set highlightedContent
-    for (WXRichTextInfo *info in _richContentArray) {
-        if (info.text.length > 0) {
-            NSRange range = [string rangeOfString:info.text options:NSCaseInsensitiveSearch];
-            if (range.location != NSNotFound) {
-                info.range = range;
-                if (info.color) {
-                    [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
-                }
-                if (info.fontSize || info.fontWeight) {
-                    if (!info.fontSize) {
-                        info.fontSize = _fontSize;
-                    }
-                    if (!info.fontWeight) {
-                        info.fontWeight = _fontWeight;
-                    }
-                    UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
-                    [attributedString addAttribute:NSFontAttributeName value:font range:range];
-                }
-                if(info.textDecoration == WXTextDecorationUnderline){
-                    [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:range];
-                } else if(info.textDecoration == WXTextDecorationLineThrough){
-                    [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:range];
-                }
-            }
-        }
-    }
-
+    [self setupHighlightedContent:attributedString];
     return attributedString;
 }
 
