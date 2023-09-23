@@ -383,6 +383,7 @@ CGFloat kDefaultScrollSnapTriggerOffset = 60;
     BOOL _isScrolling;
     BOOL _isDragging;
     CGFloat _pageSize;
+    CGFloat _appearOffset;
     CGFloat _loadMoreOffset;
     CGFloat _previousLoadMoreContentHeight;
     CGFloat _offsetAccuracy;
@@ -477,6 +478,8 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
             _pageSize = 0;
         }
         _loadMoreOffset = attributes[@"loadmoreoffset"] ? [WXConvert WXPixelType:attributes[@"loadmoreoffset"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;
+        _appearOffset = attributes[@"appearOffset"] ? [WXConvert WXPixelType:attributes[@"appearOffset"] scaleFactor:self.weexInstance.pixelScaleFactor] : 0;
+
         _loadmoreretry = attributes[@"loadmoreretry"] ? [WXConvert NSUInteger:attributes[@"loadmoreretry"]] : 0;
         _listenLoadMore = [events containsObject:@"loadmore"];
         _scrollable = attributes[@"scrollable"] ? [WXConvert BOOL:attributes[@"scrollable"]] : YES;
@@ -705,6 +708,10 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     
     if (attributes[@"loadmoreoffset"]) {
         _loadMoreOffset = [WXConvert WXPixelType:attributes[@"loadmoreoffset"] scaleFactor:self.weexInstance.pixelScaleFactor];
+    }
+    
+    if (attributes[@"appearOffset"]) {
+        _appearOffset = [WXConvert WXPixelType:attributes[@"appearOffset"] scaleFactor:self.weexInstance.pixelScaleFactor];
     }
     
     if (attributes[@"bounce"]) {
@@ -1402,6 +1409,11 @@ WX_EXPORT_METHOD(@selector(resetLoadmore))
     CGFloat vy = scrollView.contentInset.top + scrollView.contentOffset.y;
     CGFloat vw = scrollView.frame.size.width - scrollView.contentInset.left - scrollView.contentInset.right;
     CGFloat vh = scrollView.frame.size.height - scrollView.contentInset.top - scrollView.contentInset.bottom;
+    
+    if (_appearOffset > 0) {
+        vy += (_appearOffset);
+    }
+
     CGRect scrollRect = CGRectMake(vx, vy, vw, vh);;
     
     // notify action for appear
