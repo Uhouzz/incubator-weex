@@ -29,6 +29,7 @@
 #import "WXComponent+Layout.h"
 #import <pthread/pthread.h>
 #import <CoreText/CoreText.h>
+#import "WXComponent+Events.h"
 
 @interface WXRichTextInfo : NSObject
 
@@ -401,6 +402,7 @@ do {\
     
     if (_enableRichTap) {
         UITapGestureRecognizer *richTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onRichClick:)];
+        richTapGesture.delegate = self;
         [self.view addGestureRecognizer:richTapGesture];
     }
     
@@ -631,6 +633,18 @@ do {\
             WXCeilPixelValue(computedSize.height)
         };
     };
+}
+
+#pragma mark gesture delegeta
+- (BOOL)gestureShouldStopPropagation:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    if (_enableRichTap &&[gestureRecognizer isKindOfClass:[UITapGestureRecognizer class]]) {
+        CGPoint touchPoint = [touch locationInView:self.view];
+        WXRichTextInfo *result = [self linkAtCharacterIndex:[self characterIndexAtPoint:touchPoint]];
+        if (!result.action) {
+            return NO;
+        }
+    }
+    return [super gestureShouldStopPropagation:gestureRecognizer shouldReceiveTouch:touch];
 }
 
 #pragma mark Text Building
