@@ -344,8 +344,8 @@ do {\
             WXRichTextInfo *info = [[WXRichTextInfo alloc] init];
             info.text = [WXConvert NSString:map[@"text"]];
             info.color = [WXConvert UIColor:map[@"color"]];
-            info.fontSize = [WXConvert WXPixelType:map[@"fontSize"] scaleFactor:self.weexInstance.pixelScaleFactor];
-            info.fontWeight = [WXConvert WXTextWeight:map[@"fontWeight"]];
+            info.fontSize = map[@"fontSize"] ? [WXConvert WXPixelType:map[@"fontSize"] scaleFactor:self.weexInstance.pixelScaleFactor] : _fontSize;
+            info.fontWeight = map[@"fontWeight"] ? [WXConvert WXTextWeight:map[@"fontWeight"]] : _fontWeight;
             info.textDecoration = [WXConvert WXTextDecoration:map[@"textDecoration"]];
             info.action = [WXConvert NSString:map[@"action"]];
             info.extra = map[@"extra"];
@@ -788,12 +788,6 @@ do {\
                         [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
                     }
                     if (info.fontSize || info.fontWeight) {
-                        if (!info.fontSize) {
-                            info.fontSize = _fontSize;
-                        }
-                        if (!info.fontWeight) {
-                            info.fontWeight = _fontWeight;
-                        }
                         UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
                         [attributedString addAttribute:NSFontAttributeName value:font range:range];
                     }
