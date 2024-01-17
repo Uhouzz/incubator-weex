@@ -210,7 +210,7 @@ typedef UITextView WXTextAreaView;
     self.placeHolderLabel.clipsToBounds = NO;
     CGRect newFrame = self.placeHolderLabel.frame;
     newFrame.size.height = ceil(expectedLabelSize.size.height);
-    newFrame.size.width = _textView.frame.size.width- CorrectX*2;
+    newFrame.size.width = _textView.frame.size.width- CorrectX*2-((_padding.left + _border.left));
     newFrame.origin.x = CorrectX + _padding.left + _border.left; // the cursor origin.x
     self.placeHolderLabel.frame = newFrame;
     self.placeHolderLabel.attributedText = attributedString;
