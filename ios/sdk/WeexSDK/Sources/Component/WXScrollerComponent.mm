@@ -416,10 +416,20 @@ CGFloat kDefaultScrollSnapTriggerOffset = 60;
 }
 
 WX_EXPORT_METHOD(@selector(resetLoadmore))
+WX_EXPORT_METHOD(@selector(scrollToContentOffset:))
 
 - (void)resetLoadmore
 {
     _previousLoadMoreContentHeight=0;
+}
+
+- (void)scrollToContentOffset:(NSDictionary *)offset {
+    UIScrollView *scrollView = (UIScrollView *)self.view;
+    CGFloat scaleFactor = self.weexInstance.pixelScaleFactor;
+    
+    [scrollView setContentOffset:CGPointMake(-[offset[@"x"] doubleValue]*scaleFactor,
+                                             -[offset[@"y"] doubleValue]*scaleFactor)
+                        animated:[offset[@"animated"] boolValue]];
 }
 
 - (BOOL)_insertSubcomponent:(WXComponent *)subcomponent atIndex:(NSInteger)index
