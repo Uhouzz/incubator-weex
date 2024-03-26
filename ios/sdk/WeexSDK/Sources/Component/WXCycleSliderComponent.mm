@@ -358,7 +358,7 @@ typedef NS_ENUM(NSInteger, Direction) {
     if (_infinite) {
         [self resetScrollView];
     } else {
-        NSInteger index = _scrollView.contentOffset.x / self.width;
+        NSInteger index = round(_scrollView.contentOffset.x / self.width);
         [self setCurrentIndex:index];
     }
 }

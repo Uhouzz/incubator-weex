@@ -139,6 +139,7 @@ WX_EXPORT_METHOD(@selector(save:))
 
 - (void)configFilter:(NSDictionary *)styles needUpdate:(BOOL)needUpdate
 {
+    _blurRadius = 0;
     if (styles[@"filter"]) {
         NSString *filter = styles[@"filter"];
         
