@@ -750,8 +750,12 @@ do {\
     
     _truncationLine = NO;
     if (_textOverflow && [_textOverflow length] > 0) {
-        if (_lines && [_textOverflow isEqualToString:@"ellipsis"])
+        if (_lines && [_textOverflow isEqualToString:@"ellipsis"]) {
             _truncationLine = YES;
+            if (_lines == 1) {
+                paragraphStyle.lineBreakMode = NSLineBreakByTruncatingTail;
+            }
+        }
     }
     
     if (_lineHeight) {
