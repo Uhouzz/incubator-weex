@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -113,13 +113,14 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
         
         __strong WXComponent* sself = wself;
         if (sself) {
-            UIGraphicsBeginImageContextWithOptions(bounds.size, [sself _bitmapOpaqueWithSize:bounds.size] , 0.0);
-            UIImage *image = [sself drawRect:bounds];
-            if (!image) {
-                image = UIGraphicsGetImageFromCurrentImageContext();
-            }
-            UIGraphicsEndImageContext();
+            UIGraphicsImageRendererFormat *format = [[UIGraphicsImageRendererFormat alloc] init];
+            format.opaque = [sself _bitmapOpaqueWithSize:bounds.size];
+            format.scale = 0.0;
+            UIGraphicsImageRenderer *render = [[UIGraphicsImageRenderer alloc] initWithSize:bounds.size format:format];
             
+            UIImage *image = [render imageWithActions:^(UIGraphicsImageRendererContext * _Nonnull rendererContext) {
+                [sself drawRect:bounds];
+            }];
             return image;
         }
         else {
@@ -225,38 +226,6 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
     });
 }
 
-- (CGContextRef)beginDrawContext:(CGRect)bounds
-{
-    UIGraphicsBeginImageContextWithOptions(bounds.size, [self _bitmapOpaqueWithSize:bounds.size], 0.0);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-//    float scaleFactor = [[UIScreen mainScreen] scale];
-//    CGColorSpaceRef	colorSpace = CGColorSpaceCreateDeviceRGB();
-//    CGContextRef context = CGBitmapContextCreate(NULL, bounds.size.width * scaleFactor, bounds.size.height * scaleFactor, 8, 4 * bounds.size.width * scaleFactor, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-//    CGContextScaleCTM(context, scaleFactor, scaleFactor);
-//
-//    // Adjusts position and invert the image.
-//    // The OpenGL uses the image data upside-down compared commom image files.
-//    CGContextTranslateCTM(context, 0, bounds.size.height);
-//    CGContextScaleCTM(context, 1.0, -1.0);
-//    
-//    CGColorSpaceRelease(colorSpace);
-    
-    return context;
-}
-
-- (UIImage *)endDrawContext:(CGContextRef)context
-{
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    
-//    CGImageRef imageRef= CGBitmapContextCreateImage(context);
-//    UIImage *image = [[UIImage alloc] initWithCGImage:imageRef];
-//    CGContextRelease(context);
-    
-    return image;
-}
-
 - (WXDisplayBlock)_compositeDisplayBlock
 {
     return ^UIImage* (CGRect bounds, BOOL(^isCancelled)(void)) {
@@ -265,23 +234,20 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
         }
         NSMutableArray *displayBlocks = [NSMutableArray array];
         
-        CGContextRef context = [self beginDrawContext:bounds];
+        UIGraphicsImageRendererFormat *format = [[UIGraphicsImageRendererFormat alloc] init];
+        format.opaque = [self _bitmapOpaqueWithSize:bounds.size];
+        format.scale = 0;
+        UIGraphicsImageRenderer *render = [[UIGraphicsImageRenderer alloc] initWithSize:bounds.size format:format];
         
-        UIGraphicsPushContext(context);
-        
-        [self _collectCompositingDisplayBlocks:displayBlocks context:context isCancelled:isCancelled];
-        
-        for (dispatch_block_t block in displayBlocks) {
-            if (isCancelled()) {
-                [self endDrawContext:context];
-                return nil;
+        UIImage *image = [render imageWithActions:^(UIGraphicsImageRendererContext * _Nonnull rendererContext) {
+            CGContextRef context = rendererContext.CGContext;
+            UIGraphicsPushContext(context);
+            [self _collectCompositingDisplayBlocks:displayBlocks context:context isCancelled:isCancelled];
+            for (dispatch_block_t block in displayBlocks) {
+                block();
             }
-            block();
-        }
-        
-        UIGraphicsPopContext();
-        
-        UIImage *image = [self endDrawContext:context];
+            UIGraphicsPopContext();
+        }];
         return image;
     };
 }
