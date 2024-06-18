@@ -33,6 +33,7 @@
 #import "WXPageEventNotifyEvent.h"
 #import "WXComponent+Layout.h"
 #import "WXUtility.h"
+#import "WXModuleProtocol.h"
 
 @interface WXScrollerComponentView : UIScrollView
 @end
@@ -417,6 +418,77 @@ CGFloat kDefaultScrollSnapTriggerOffset = 60;
 
 WX_EXPORT_METHOD(@selector(resetLoadmore))
 WX_EXPORT_METHOD(@selector(scrollToContentOffset:))
+WX_EXPORT_METHOD(@selector(getScrollComponentRect:callback:))
+
+
+- (void)performBlockOnComponentManager:(void(^)(WXComponentManager *))block
+{
+    if (!block) {
+        return;
+    }
+    __weak typeof(self) weakSelf = self;
+    
+    WXPerformBlockOnComponentThread(^{
+        WXComponentManager *manager = weakSelf.weexInstance.componentManager;
+        if (!manager.isValid) {
+            return;
+        }
+        [manager startComponentTasks];
+        block(manager);
+    });
+}
+
+
+- (void)getScrollComponentRect:(NSString*)ref callback:(WXModuleKeepAliveCallback)callback {
+    if (ref == nil || ![ref isKindOfClass:[NSString class]]) {
+        if (callback) {
+            callback(@{@"result": @(NO), @"errMsg": @"Illegal parameter, ref must be a string."}, false);
+        }
+        return;
+    }
+    
+    [self performBlockOnComponentManager:^(WXComponentManager * manager) {
+        WXComponent *component = [manager componentForRef:ref];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIView *rootView = manager.weexInstance.rootView;
+            NSMutableDictionary * callbackRsp = nil;
+            if (!component) {
+                callbackRsp = [NSMutableDictionary new];
+                [callbackRsp setObject:@(false) forKey:@"result"];
+                [callbackRsp setObject:[NSString stringWithFormat:@"Illegal parameter, no ref about \"%@\" can be found", ref] forKey:@"errMsg"];
+            } else {
+                UIScrollView *scrollView = (UIScrollView *)self.view;
+                CGRect componentRect = CGRectZero;
+                // if current component view is not loaded or it hasn't been inserted to its superview, so the position cannot be obtained correct except width and height
+                if ([component isViewLoaded] && component.view.superview) {
+                    componentRect = [component.view.superview convertRect:component.view.frame toView:scrollView];
+                } else {
+                    componentRect = component.calculatedFrame;
+                }
+                callbackRsp = [self _componentRectInfoWithViewFrame:componentRect];
+                [callbackRsp setObject:@(true)forKey:@"result"];
+            }
+            if (callback) {
+                callback(callbackRsp, false);
+            }
+        });
+    }];
+}
+
+- (NSMutableDictionary*)_componentRectInfoWithViewFrame:(CGRect)componentRect
+{
+    CGFloat scaleFactor = self.weexInstance.pixelScaleFactor;
+    NSMutableDictionary *callbackRsp = [NSMutableDictionary new];
+    [callbackRsp setObject:@{
+                             @"width":@(componentRect.size.width /scaleFactor),
+                             @"height":@(componentRect.size.height / scaleFactor),
+                             @"bottom":@(CGRectGetMaxY(componentRect) / scaleFactor),
+                             @"left":@(componentRect.origin.x / scaleFactor),
+                             @"right":@(CGRectGetMaxX(componentRect) / scaleFactor),
+                             @"top":@(componentRect.origin.y / scaleFactor)
+                             } forKey:@"size"];
+    return callbackRsp;
+}
 
 - (void)resetLoadmore
 {
@@ -427,8 +499,8 @@ WX_EXPORT_METHOD(@selector(scrollToContentOffset:))
     UIScrollView *scrollView = (UIScrollView *)self.view;
     CGFloat scaleFactor = self.weexInstance.pixelScaleFactor;
     
-    [scrollView setContentOffset:CGPointMake(-[offset[@"x"] doubleValue]*scaleFactor,
-                                             -[offset[@"y"] doubleValue]*scaleFactor)
+    [scrollView setContentOffset:CGPointMake([offset[@"x"] doubleValue]*scaleFactor,
+                                             [offset[@"y"] doubleValue]*scaleFactor)
                         animated:[offset[@"animated"] boolValue]];
 }
 
