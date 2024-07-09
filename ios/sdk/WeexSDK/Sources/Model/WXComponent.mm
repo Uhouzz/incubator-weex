@@ -499,8 +499,11 @@ static BOOL bNeedRemoveEvents = YES;
 
 - (void)_resetNativeBorderRadius
 {
-    WXRoundedRect *borderRect = [[WXRoundedRect alloc] initWithRect:_calculatedFrame topLeft:_borderTopLeftRadius topRight:_borderTopRightRadius bottomLeft:_borderBottomLeftRadius bottomRight:_borderBottomRightRadius];
-    _layer.cornerRadius = borderRect.radii.topLeft;
+    if (_borderTopLeftRadius == _borderTopRightRadius && _borderTopRightRadius == _borderBottomLeftRadius && _borderBottomLeftRadius == _borderBottomRightRadius)
+    {
+        WXRoundedRect *borderRect = [[WXRoundedRect alloc] initWithRect:_calculatedFrame topLeft:_borderTopLeftRadius topRight:_borderTopRightRadius bottomLeft:_borderBottomLeftRadius bottomRight:_borderBottomRightRadius];
+        _layer.cornerRadius = borderRect.radii.topLeft;
+    }
 }
 
 - (void)_handleFirstScreenTime
