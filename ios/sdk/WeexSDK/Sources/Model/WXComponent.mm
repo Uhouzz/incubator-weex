@@ -914,15 +914,13 @@ static BOOL bNeedRemoveEvents = YES;
 
 - (UIImage *)imageFromLayer:(CALayer *)layer
 {
-    UIGraphicsImageRendererFormat *format = [[UIGraphicsImageRendererFormat alloc] init];
-    format.opaque = NO;
-    format.scale = 0;
-    UIGraphicsImageRenderer *render = [[UIGraphicsImageRenderer alloc] initWithSize:layer.frame.size format:format];
-    
-    UIImage *outputImage = [render imageWithActions:^(UIGraphicsImageRendererContext * _Nonnull rendererContext) {
-        CGContextRef context = rendererContext.CGContext;
-        [layer renderInContext:context];
-    }];
+    if (layer.frame.size.width == 0 || layer.frame.size.height == 0) {
+        return nil;
+    }
+    UIGraphicsBeginImageContextWithOptions(layer.frame.size, NO, 0);
+    [layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *outputImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
     return outputImage;
 }
 
