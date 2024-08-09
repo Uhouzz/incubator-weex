@@ -508,6 +508,22 @@ WX_NUMBER_CONVERT(NSUInteger, unsignedIntegerValue)
 
 #pragma mark Text
 
++ (UIFontWidth)WXFontWidth:(id)value
+{
+    if([value isKindOfClass:[NSString class]]){
+        NSString *string = (NSString *)value;
+        if ([string isEqualToString:@"compressed"])
+            return UIFontWidthCompressed;
+        else if ([string isEqualToString:@"condensed"])
+            return UIFontWidthCondensed;
+        else if ([string isEqualToString:@"standard"])
+            return UIFontWidthStandard;
+        else if ([string isEqualToString:@"expanded"])
+            return UIFontWidthExpanded;
+    }
+    return UIFontWidthStandard;
+}
+
 + (NSTextAlignment)NSTextAlignment:(id)value
 {
     if([value isKindOfClass:[NSString class]]){

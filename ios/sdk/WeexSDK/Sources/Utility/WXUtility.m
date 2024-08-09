@@ -517,7 +517,11 @@ CGFloat WXFloorPixelValue(CGFloat value)
     return [self fontWithSize:size textWeight:textWeight textStyle:textStyle fontFamily:fontFamily scaleFactor:[self defaultPixelScaleFactor]];
 }
 
-+ (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily scaleFactor:(CGFloat)scaleFactor useCoreText:(BOOL)useCoreText
++ (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily scaleFactor:(CGFloat)scaleFactor useCoreText:(BOOL)useCoreText {
+    return [self fontWithSize:size textWeight:textWeight textStyle:textStyle fontFamily:fontFamily fontWidth:nil scaleFactor:scaleFactor useCoreText:useCoreText];
+}
+
++ (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily fontWidth:(NSString *)fontWidth scaleFactor:(CGFloat)scaleFactor useCoreText:(BOOL)useCoreText
 {
     static NSMutableDictionary* RegisteredFontFileNames;
     static dispatch_once_t onceToken;
@@ -603,7 +607,9 @@ CGFloat WXFloorPixelValue(CGFloat value)
         }
     }
     if (!font) {
-        if (fontFamily) {
+        if (fontWidth && @available(iOS 16.0, *)) {
+            font = [UIFont systemFontOfSize:fontSize weight:textWeight width:[WXConvert WXFontWidth:fontWidth]];
+        } else if (fontFamily) {
             font = [UIFont fontWithName:fontFamily size:fontSize];
         }
         if (!font) {
@@ -637,6 +643,11 @@ CGFloat WXFloorPixelValue(CGFloat value)
 + (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily scaleFactor:(CGFloat)scaleFactor
 {
     return [self fontWithSize:size textWeight:textWeight textStyle:textStyle fontFamily:fontFamily scaleFactor:scaleFactor useCoreText:NO];
+}
+
++ (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily fontWidth:(NSString *)fontWidth scaleFactor:(CGFloat)scaleFactor
+{
+    return [self fontWithSize:size textWeight:textWeight textStyle:textStyle fontFamily:fontFamily fontWidth:fontWidth scaleFactor:scaleFactor useCoreText:NO];
 }
 
 + (void)getIconfont:(NSURL *)url completion:(void(^)(NSURL *url, NSError *error))completionBlock

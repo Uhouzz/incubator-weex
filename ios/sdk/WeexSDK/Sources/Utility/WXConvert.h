@@ -80,6 +80,7 @@ typedef BOOL WXClipType;
  * @return A float value.
  *
  */
++ (UIFontWidth)WXFontWidth:(id)value;
 + (CGFloat)WXTextWeight:(id)value;
 + (WXTextDecoration)WXTextDecoration:(id)value;
 + (NSTextAlignment)NSTextAlignment:(id)value;

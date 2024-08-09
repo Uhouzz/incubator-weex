@@ -261,7 +261,11 @@ _Nonnull SEL WXSwizzledSelectorForSelector(_Nonnull SEL selector);
  */
 + (UIFont *_Nonnull)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *_Nullable)fontFamily scaleFactor:(CGFloat)scaleFactor;
 
++ (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily fontWidth:(NSString *)fontWidth scaleFactor:(CGFloat)scaleFactor;
+
 + (UIFont *_Nonnull)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *_Nullable)fontFamily scaleFactor:(CGFloat)scaleFactor useCoreText:(BOOL)useCoreText;
+
++ (UIFont *)fontWithSize:(CGFloat)size textWeight:(CGFloat)textWeight textStyle:(WXTextStyle)textStyle fontFamily:(NSString *)fontFamily fontWidth:(NSString *)fontWidth scaleFactor:(CGFloat)scaleFactor useCoreText:(BOOL)useCoreText;
 
 /**
  * @abstract download remote font from specified url

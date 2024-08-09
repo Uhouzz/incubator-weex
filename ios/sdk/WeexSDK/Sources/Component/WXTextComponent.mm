@@ -40,6 +40,8 @@
 @property (nonatomic, strong) NSMutableArray *ranges;
 @property (nonatomic, copy) NSString *text;
 @property (nonatomic, copy) NSString *action;
+@property (nonatomic, copy) NSString *fontFamily;
+@property (nonatomic, copy) NSString *fontWidth;
 @property (nonatomic, strong) NSDictionary *extra;
 
 @end
@@ -139,6 +141,7 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
 
 @interface WXTextComponent()
 @property (atomic, strong) NSString *fontFamily;
+@property (atomic, strong) NSString *fontWidth;
 @property (atomic, strong) UIColor *textColor;
 @end
 
@@ -274,6 +277,15 @@ do {\
         }
     } while(0);
     
+    do {
+        id value = styles[@"fontWidth"];
+        if (value) {
+            self.fontWidth = [WXConvert NSString:value];
+            [self setNeedsRepaint];
+            [self setNeedsLayout];
+        }
+    } while(0);
+    
     WX_STYLE_FILL_TEXT_PIXEL(fontSize, fontSize, YES) //!OCLint
     WX_STYLE_FILL_TEXT(fontWeight, fontWeight, WXTextWeight, YES) //!OCLint
     WX_STYLE_FILL_TEXT(fontStyle, fontStyle, WXTextStyle, YES) //!OCLint
@@ -349,6 +361,8 @@ do {\
             info.fontWeight = map[@"fontWeight"] ? [WXConvert WXTextWeight:map[@"fontWeight"]] : _fontWeight;
             info.textDecoration = [WXConvert WXTextDecoration:map[@"textDecoration"]];
             info.action = [WXConvert NSString:map[@"action"]];
+            info.fontFamily = map[@"fontFamily"] ? : self.fontFamily;
+            info.fontWidth = map[@"fontWidth"] ? : self.fontWidth;
             info.extra = map[@"extra"];
             [_richContentArray addObject:info];
         }
@@ -694,7 +708,7 @@ do {\
     [attributedString addAttribute:NSForegroundColorAttributeName value:self.textColor range:NSMakeRange(0, string.length)];
     
     // set font
-    UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:self.fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+    UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:self.fontFamily fontWidth:self.fontWidth scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
     CTFontRef ctFont;
     
     if (_fontStyle == WXTextStyleItalic) {
@@ -791,7 +805,7 @@ do {\
                         [attributedString addAttribute:NSForegroundColorAttributeName value:info.color range:range];
                     }
                     if (info.fontSize || info.fontWeight) {
-                        UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:_fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+                        UIFont *font = [WXUtility fontWithSize:info.fontSize textWeight:info.fontWeight textStyle:WXTextStyleNormal fontFamily:info.fontFamily fontWidth:info.fontWidth scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
                         [attributedString addAttribute:NSFontAttributeName value:font range:range];
                     }
                     
@@ -820,7 +834,7 @@ do {\
     [attributedString addAttribute:NSForegroundColorAttributeName value:self.textColor range:NSMakeRange(0, string.length)];
     
     // set font
-    UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:_fontStyle fontFamily:self.fontFamily scaleFactor:self.weexInstance.pixelScaleFactor];
+    UIFont *font = [WXUtility fontWithSize:_fontSize textWeight:_fontWeight textStyle:_fontStyle fontFamily:self.fontFamily fontWidth:self.fontWidth scaleFactor:self.weexInstance.pixelScaleFactor];
     if (font) {
         [attributedString addAttribute:NSFontAttributeName value:font range:NSMakeRange(0, string.length)];
     }
@@ -1131,7 +1145,7 @@ do {\
         attrs = attrs ? attrs.mutableCopy : [NSMutableDictionary new];
         CTFontRef font = (__bridge CTFontRef)(attrs[(id)kCTFontAttributeName]);
         CGFloat fontSize = font ? CTFontGetSize(font):32 * self.weexInstance.pixelScaleFactor;
-        UIFont *uiFont = [WXUtility fontWithSize:fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:self.fontFamily scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
+        UIFont *uiFont = [WXUtility fontWithSize:fontSize textWeight:_fontWeight textStyle:WXTextStyleNormal fontFamily:self.fontFamily fontWidth:self.fontWidth scaleFactor:self.weexInstance.pixelScaleFactor useCoreText:[self useCoreText]];
         if (uiFont) {
             font = CTFontCreateWithFontDescriptor((__bridge CTFontDescriptorRef)uiFont.fontDescriptor, uiFont.pointSize, NULL);
         }
