@@ -619,11 +619,12 @@ CGFloat WXFloorPixelValue(CGFloat value)
             font = [UIFont systemFontOfSize:fontSize weight:textWeight];
         }
     }
+    
     UIFontDescriptor *fontD = font.fontDescriptor;
     UIFontDescriptorSymbolicTraits traits = 0;
     
     traits = (textWeight-UIFontWeightBold >= 0.0) ? (traits | UIFontDescriptorTraitBold) : traits;
-    if (textStyle == WXTextStyleItalic || traits != 0) {
+    if (!fontWidth && (textStyle == WXTextStyleItalic || traits != 0)) {
         if (traits != 0) {
             fontD = [fontD fontDescriptorWithSymbolicTraits:traits];
         }
