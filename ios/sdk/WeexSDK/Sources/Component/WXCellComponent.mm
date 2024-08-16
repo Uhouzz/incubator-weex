@@ -86,6 +86,7 @@
 
 - (void)didFinishDrawingLayer:(BOOL)success
 {
+    [super didFinishDrawingLayer:success];
     [self.delegate cellDidRendered:self];
 }
 

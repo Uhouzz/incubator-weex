@@ -105,6 +105,7 @@ typedef id (^WXDataBindingBlock)(NSDictionary *data, BOOL *needUpdate);
     
     BOOL _listenStopPropagation;
     BOOL _customEvent;
+    BOOL _isDisplaying;
     NSString *_stopPropagationName;
     WXTouchGestureRecognizer* _touchGesture;
     

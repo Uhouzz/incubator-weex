@@ -60,7 +60,12 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
     } else if (!_layer || _layer.frame.size.width ==0 || _layer.frame.size.height == 0) {
         return;
     } else {
-        [_layer setNeedsDisplay];
+        if (_isDisplaying) { //正在更新时，立即刷新, 防止不执行[layer display];
+            [_layer setNeedsDisplay];
+            [_layer displayIfNeeded];
+        } else {
+            [_layer setNeedsDisplay];
+        }
     }
 }
 
@@ -99,6 +104,7 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
 - (void)didFinishDrawingLayer:(BOOL)success
 {
     WXAssertMainThread();
+    _isDisplaying = NO;
 }
 
 #pragma mark Private
@@ -149,8 +155,10 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
 {
     WXAssertMainThread();
     
+    _isDisplaying = YES;
     if (_isCompositingChild) {
         // compsiting children do not have own layers, so return here.
+        _isDisplaying = NO;
         return;
     }
     

@@ -288,6 +288,8 @@ WX_EXPORT_METHOD(@selector(save:))
 }
 
 - (void)didFinishDrawingLayer:(BOOL)success {
+    [super didFinishDrawingLayer:success];
+
     if ([self isViewLoaded]) {
         UIImage *image = ((UIImageView *)self.view).image;
         if (image) {
