@@ -132,7 +132,7 @@ WX_EXPORT_METHOD(@selector(save:))
 
 - (void)configFilter:(NSDictionary *)styles needUpdate:(BOOL)needUpdate
 {
-    _blurRadius = 0;
+    CGFloat blurRadius = 0;
     if (styles[@"filter"]) {
         NSString *filter = styles[@"filter"];
         
@@ -147,11 +147,14 @@ WX_EXPORT_METHOD(@selector(save:))
             NSRange matchRange = [match rangeAtIndex:1];
             NSString *matchString = [filter substringWithRange:matchRange];
             if (matchString && matchString.length > 0) {
-                _blurRadius = [matchString doubleValue];
-                if (needUpdate) {
-                    [self updateImage];
-                }
+                blurRadius = [matchString doubleValue];
             }
+        }
+    }
+    if (_blurRadius != blurRadius) {
+        _blurRadius = blurRadius;
+        if (needUpdate) {
+            [self updateImage];
         }
     }
 }
