@@ -727,7 +727,8 @@ do {\
     }
     
     if(_textDecoration == WXTextDecorationUnderline){
-        [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:NSMakeRange(0, string.length)];
+      
+        [attributedString addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:NSMakeRange(0, string.length)];
     } else if(_textDecoration == WXTextDecorationLineThrough){
         [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:NSMakeRange(0, string.length)];
     }
@@ -810,7 +811,7 @@ do {\
                     }
                     
                     if(info.textDecoration == WXTextDecorationUnderline){
-                        [attributedString addAttribute:(id)kCTUnderlineStyleAttributeName value:@(kCTUnderlinePatternSolid | kCTUnderlineStyleSingle) range:range];
+                        [attributedString addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:range];
                     } else if(info.textDecoration == WXTextDecorationLineThrough){
                         [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:range];
                     }
@@ -840,7 +841,7 @@ do {\
     }
     
     if(_textDecoration == WXTextDecorationUnderline){
-        [attributedString addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:NSMakeRange(0, string.length)];
+        [attributedString addAttribute:NSUnderlineStyleAttributeName value:@(NSUnderlineStyleSingle) range:NSMakeRange(0, string.length)];
     } else if(_textDecoration == WXTextDecorationLineThrough){
         [attributedString addAttribute:NSStrikethroughStyleAttributeName value:@(NSUnderlinePatternSolid | NSUnderlineStyleSingle) range:NSMakeRange(0, string.length)];
     }
@@ -1093,6 +1094,9 @@ do {\
             }
         }
         
+        if (@available(iOS 18.0, *) && _textDecoration == WXTextDecorationUnderline) {//iOS18 下划线不生效
+            CTFrameDraw(coreTextFrameRef, context);
+        }
         [mutableLines removeAllObjects];
         CGPathRelease(cgPath);
         CFRelease(coreTextFrameRef);
