@@ -227,6 +227,14 @@ typedef UITextView WXTextAreaView;
     [self setNeedsLayout];
 }
 
+
+- (void)_layoutDidFinish {
+    [super _layoutDidFinish];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self _updateTextContentInset];
+    });
+}
+
 #pragma mark -Private Method
 - (void)_updateTextContentInset
 {
