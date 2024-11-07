@@ -319,6 +319,10 @@ typedef enum : NSUInteger {
 
 - (void)scrollToComponent:(WXComponent *)component withOffset:(CGFloat)offset animated:(BOOL)animated
 {
+    if (_collectionView.contentSize.height < _collectionView.frame.size.height) {
+        return;
+    }
+
     CGPoint contentOffset = _collectionView.contentOffset;
     CGFloat contentOffsetY = 0;
     
