@@ -825,13 +825,20 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     }
     
     if (_maxLength) {
-        NSUInteger oldLength = [textView.text length];
-        NSUInteger replacementLength = [text length];
-        NSUInteger rangeLength = range.length;
-        NSUInteger newLength = oldLength - rangeLength + replacementLength;
-        return newLength <= [_maxLength integerValue] ;
+        NSString *toBeString = [textView.text stringByReplacingCharactersInRange:range withString:text];
+        UITextRange *selectedRange = [textView markedTextRange];
+        UITextPosition *position = [textView positionFromPosition:selectedRange.start offset:0];
+        if (!position) {
+            if (toBeString.length > [_maxLength integerValue]) {
+                textView.text = [toBeString substringToIndex:[_maxLength integerValue]];
+                self.placeHolderLabel.text = @"";
+                if (_inputEvent) {
+                    [self fireEvent:@"input" params:@{@"value":[textView text]} domChanges:@{@"attrs":@{@"value":[textView text]}}];
+                }
+                return NO;
+            }
+        }
     }
-    
     return YES;
 }
 
