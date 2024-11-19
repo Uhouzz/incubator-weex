@@ -65,6 +65,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSArray*)customizeProtocolClasses;
 + (void)setCustomizeProtocolClasses:(NSArray*)customizeProtocolClasses;
 
+
++ (NSURLSessionConfiguration *)customizeSessionConfig;
++ (void)setCustomizeSessionConfig:(NSURLSessionConfiguration *)customizeSessionConfig;
+
+
 @end
 
 NS_ASSUME_NONNULL_END

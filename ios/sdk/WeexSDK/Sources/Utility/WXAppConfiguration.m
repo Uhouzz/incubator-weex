@@ -28,6 +28,8 @@
 @property (nonatomic, strong) NSString * JSFrameworkVersion;
 @property (nonatomic, assign) NSUInteger JSFrameworkLibSize;
 @property (nonatomic, strong) NSArray  * customizeProtocolClasses;
+@property (nonatomic, strong) NSURLSessionConfiguration  *customizeSessionConfig;
+
 @end
 
 @implementation WXAppConfiguration
@@ -108,6 +110,14 @@
 
 + (void)setCustomizeProtocolClasses:(NSArray *)customizeProtocolClasses{
     [WXAppConfiguration sharedConfiguration].customizeProtocolClasses = customizeProtocolClasses;
+}
+
++ (NSURLSessionConfiguration *)customizeSessionConfig {
+    return [WXAppConfiguration sharedConfiguration].customizeSessionConfig;
+}
+
++ (void)setCustomizeSessionConfig:(NSURLSessionConfiguration *)customizeSessionConfig {
+    [WXAppConfiguration sharedConfiguration].customizeSessionConfig = customizeSessionConfig;
 }
 
 

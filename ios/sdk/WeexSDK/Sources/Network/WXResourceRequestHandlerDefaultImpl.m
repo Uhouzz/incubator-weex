@@ -38,6 +38,9 @@
 {
     if (!_session) {
         NSURLSessionConfiguration *urlSessionConfig = [NSURLSessionConfiguration defaultSessionConfiguration];
+        if ([WXAppConfiguration customizeSessionConfig]) {
+            urlSessionConfig = [WXAppConfiguration customizeSessionConfig];
+        }
         if ([WXAppConfiguration customizeProtocolClasses].count > 0) {
             NSArray *defaultProtocols = urlSessionConfig.protocolClasses;
             urlSessionConfig.protocolClasses = [[WXAppConfiguration customizeProtocolClasses] arrayByAddingObjectsFromArray:defaultProtocols];
