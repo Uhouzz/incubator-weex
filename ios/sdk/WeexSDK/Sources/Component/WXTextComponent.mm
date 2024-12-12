@@ -356,6 +356,9 @@ do {\
         for (NSDictionary *map in highlightedContents) {
             WXRichTextInfo *info = [[WXRichTextInfo alloc] init];
             info.text = [WXConvert NSString:map[@"text"]];
+            if (info.text) {
+                info.text = [info.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            }
             info.color = [WXConvert UIColor:map[@"color"]];
             info.fontSize = map[@"fontSize"] ? [WXConvert WXPixelType:map[@"fontSize"] scaleFactor:self.weexInstance.pixelScaleFactor] : _fontSize;
             info.fontWeight = map[@"fontWeight"] ? [WXConvert WXTextWeight:map[@"fontWeight"]] : _fontWeight;
