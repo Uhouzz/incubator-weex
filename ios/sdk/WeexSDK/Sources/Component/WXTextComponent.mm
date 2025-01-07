@@ -210,6 +210,10 @@ static CGFloat WXTextDefaultLineThroughWidth = 1.2;
 
 - (BOOL)useCoreText
 {
+    //iconfont 防止被裁
+    if ([self.fontFamily isEqualToString:@"uhomesfont"]) {
+        return NO;
+    }
     return _useCoreText;
 }
 
