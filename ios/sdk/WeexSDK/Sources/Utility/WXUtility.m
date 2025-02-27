@@ -959,6 +959,7 @@ CGFloat WXFloorPixelValue(CGFloat value)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    dateFormatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US"];
     NSString *str = [dateFormatter stringFromDate:date];
     return str;
 }
@@ -967,6 +968,7 @@ CGFloat WXFloorPixelValue(CGFloat value)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     [dateFormatter setDateFormat:@"HH:mm"];
+    dateFormatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US"];
     NSString *str = [dateFormatter stringFromDate:date];
     return str;
 }
@@ -975,6 +977,7 @@ CGFloat WXFloorPixelValue(CGFloat value)
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm"];
+    dateFormatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US"];
     NSString *str = [dateFormatter stringFromDate:date];
     return str;
 }
