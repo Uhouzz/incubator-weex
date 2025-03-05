@@ -642,6 +642,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     }
   
     if ([_inputType isEqualToString:@"tel"] || [_inputType isEqualToString:@"number"] ) {
+        string = [string stringByReplacingOccurrencesOfString:@" " withString:@""];
         if (![self isPureInt:string]) {
             if ([string isEqualToString:@"+"]||[string isEqualToString:@"."]||[string isEqualToString:@"*"]||[string isEqualToString:@"#"]||(string.length == 0 && range.length == 1))
             {
