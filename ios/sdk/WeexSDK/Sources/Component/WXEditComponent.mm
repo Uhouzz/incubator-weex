@@ -784,6 +784,14 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (void)textViewDidChange:(UITextView *)textView
 {
+    UITextRange *markedTextRange = textView.markedTextRange;
+    if (!markedTextRange || markedTextRange.isEmpty) {
+    // 没有标记文本，说明输入已完成，此时检查长度
+        if (textView.text.length > self.maxLength.integerValue) {
+            textView.text = [textView.text substringToIndex:self.maxLength.integerValue];
+        }
+    }
+    
     if(textView.text && [textView.text length] > 0) {
         self.placeHolderLabel.text = @"";
     }else{
@@ -824,23 +832,48 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
             return NO;
         }
     }
-    
-    if (_maxLength) {
-        NSString *toBeString = [textView.text stringByReplacingCharactersInRange:range withString:text];
-        UITextRange *selectedRange = [textView markedTextRange];
-        UITextPosition *position = [textView positionFromPosition:selectedRange.start offset:0];
-        if (!position) {
-            if (toBeString.length > [_maxLength integerValue]) {
-                textView.text = [toBeString substringToIndex:[_maxLength integerValue]];
-                self.placeHolderLabel.text = @"";
-                if (_inputEvent) {
-                    [self fireEvent:@"input" params:@{@"value":[textView text]} domChanges:@{@"attrs":@{@"value":[textView text]}}];
+    if (!self.maxLength) {
+        return YES;
+    }
+
+    NSString *toBeString = [textView.text stringByReplacingCharactersInRange:range withString:text];
+    UITextRange *selectedRange = [textView markedTextRange];
+    if (selectedRange && !selectedRange.isEmpty) {
+        return YES;
+    }
+    NSInteger maxLength = self.maxLength.integerValue;
+    if (toBeString.length > maxLength) {
+        if (range.length > 0 && text.length == 0) {
+            return YES;
+        }
+        if (range.location < maxLength) {
+            NSInteger remainingLength = maxLength - textView.text.length + range.length;
+            if (remainingLength > 0) {
+                NSString *allowedText = [text substringToIndex:MIN(remainingLength, text.length)];
+                NSInteger cursorPosition = range.location + allowedText.length;
+                textView.text = [textView.text stringByReplacingCharactersInRange:range withString:allowedText];
+                [self textViewDidChange:textView];
+                UITextPosition *position = [textView positionFromPosition:textView.beginningOfDocument offset:cursorPosition];
+                if (position) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        UITextRange *newSelectedRange = [textView textRangeFromPosition:position toPosition:position];
+                        [textView setSelectedTextRange:newSelectedRange];
+                    });
                 }
-                return NO;
+            } else {
+                UITextPosition *position = [textView positionFromPosition:textView.beginningOfDocument offset:range.location];
+                if (position) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        UITextRange *newSelectedRange = [textView textRangeFromPosition:position toPosition:position];
+                        [textView setSelectedTextRange:newSelectedRange];
+                    });
+                }
             }
         }
+        return NO;
     }
     return YES;
+    
 }
 
 #pragma mark private method
