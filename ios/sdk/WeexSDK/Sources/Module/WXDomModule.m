@@ -33,6 +33,7 @@
 #import <objc/message.h>
 #import "WXSDKInstance_performance.h"
 #import "WXMonitor.h"
+#import "WXConvert.h"
 
 @interface WXDomModule ()
 
@@ -60,6 +61,7 @@ WX_EXPORT_METHOD(@selector(getLayoutDirection:callback:))
 WX_EXPORT_METHOD(@selector(updateComponentData:componentData:callback:))
 WX_EXPORT_METHOD(@selector(beginBatchMark))
 WX_EXPORT_METHOD(@selector(endBatchMark))
+WX_EXPORT_METHOD(@selector(calculateTextHeightWithText:style:callback:))
 
 - (void)performBlockOnComponentManager:(void(^)(WXComponentManager *))block
 {
@@ -332,6 +334,46 @@ WX_EXPORT_METHOD(@selector(endBatchMark))
         // Destroy weexcore c++ page and objects.
         [WXCoreBridge closePage:instanceId];
     }];
+}
+
+- (CGFloat)calculateTextHeightWithText:(NSString *)text
+                                 style:(NSDictionary *)style
+                              callback:(WXModuleKeepAliveCallback)callback {
+    if (!text) {
+        return 0;
+    }
+    
+    if (![style[@"maxWidth"] floatValue]) {
+        return 0;
+    }
+    
+    CGFloat scaleFactor = self.weexInstance.pixelScaleFactor;
+
+    CGFloat fontSize =  [WXConvert WXPixelType:style[@"fontSize"] scaleFactor:scaleFactor];
+    CGFloat fontWeight = [WXConvert WXTextWeight:style[@"fontWeight"]];
+    CGFloat lineHeight =  [WXConvert WXPixelType:style[@"lineHeight"] scaleFactor:scaleFactor];
+    CGFloat maxWidth =  [WXConvert WXPixelType:style[@"maxWidth"] scaleFactor:scaleFactor];
+
+    // set font
+    UIFont *font = [WXUtility fontWithSize:fontSize textWeight:fontWeight textStyle:WXTextStyleNormal fontFamily:nil scaleFactor:scaleFactor];
+   
+    NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+    if (lineHeight) {
+        paragraphStyle.maximumLineHeight = lineHeight;
+        paragraphStyle.minimumLineHeight = lineHeight;
+    }
+    
+    NSDictionary *attributes = @{
+        NSFontAttributeName: font,
+        NSParagraphStyleAttributeName: paragraphStyle
+    };
+    CGRect rect = [text boundingRectWithSize:CGSizeMake(maxWidth, CGFLOAT_MAX)
+                                    options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                 attributes:attributes
+                                    context:nil];
+    if (callback) {
+        callback(@{@"height":@(CGRectGetHeight(rect)/scaleFactor)},false);
+    }
 }
 
 - (NSMutableDictionary*)_componentRectInfoWithViewFrame:(CGRect)componentRect

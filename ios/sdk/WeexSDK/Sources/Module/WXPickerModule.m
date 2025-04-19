@@ -454,7 +454,7 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
     if (options[@"localeId"]) {
         NSString *localeId = [WXConvert NSString:options[@"localeId"]];
         if ([localeId isEqualToString:@"en-us"]) {
-            localeId = @"en_AU";//采用英式标准
+            localeId = @"en_AU";
         }
         [self.datePicker setLocale:[[NSLocale alloc] initWithLocaleIdentifier:localeId]];
     }
