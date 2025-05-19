@@ -784,11 +784,13 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 
 - (void)textViewDidChange:(UITextView *)textView
 {
-    UITextRange *markedTextRange = textView.markedTextRange;
-    if (!markedTextRange || markedTextRange.isEmpty) {
-    // 没有标记文本，说明输入已完成，此时检查长度
-        if (textView.text.length > self.maxLength.integerValue) {
-            textView.text = [textView.text substringToIndex:self.maxLength.integerValue];
+    if (self.maxLength.integerValue) {
+        UITextRange *markedTextRange = textView.markedTextRange;
+        if (!markedTextRange || markedTextRange.isEmpty) {
+        // 没有标记文本，说明输入已完成，此时检查长度
+            if (textView.text.length > self.maxLength.integerValue) {
+                textView.text = [textView.text substringToIndex:self.maxLength.integerValue];
+            }
         }
     }
     
