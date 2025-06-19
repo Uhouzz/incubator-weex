@@ -1000,11 +1000,28 @@ do {\
         });
     }
     if (![self useCoreText]) {
+        // 添加空值检查防止EXC_BAD_ACCESS异常
+        if (!_textStorage) {
+            return;
+        }
+        
         NSLayoutManager *layoutManager = _textStorage.layoutManagers.firstObject;
+        if (!layoutManager) {
+            return;
+        }
+        
         NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+        if (!textContainer) {
+            return;
+        }
         
         CGRect textFrame = UIEdgeInsetsInsetRect(bounds, padding);
         NSRange glyphRange = [layoutManager glyphRangeForTextContainer:textContainer];
+        
+        // 检查glyphRange是否有效
+        if (glyphRange.location == NSNotFound || glyphRange.length == 0) {
+            return;
+        }
         
         [layoutManager drawBackgroundForGlyphRange:glyphRange atPoint:textFrame.origin];
         [layoutManager drawGlyphsForGlyphRange:glyphRange atPoint:textFrame.origin];
