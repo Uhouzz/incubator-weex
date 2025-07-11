@@ -845,6 +845,12 @@ static BOOL bNeedRemoveEvents = YES;
 
 - (void)setGradientLayer
 {
+    if (!_backgroundImage || _backgroundImage.length == 0) {
+        self.styleBackgroundColor = [UIColor clearColor];
+        self.view.backgroundColor = self.styleBackgroundColor;
+        return;
+    }
+    
     if (CGRectEqualToRect(self.view.frame, CGRectZero)) {
         return;
     }
