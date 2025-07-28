@@ -1023,6 +1023,18 @@ do {\
             return;
         }
         
+        // 检查字形数量是否有效
+        NSUInteger numberOfGlyphs = [layoutManager numberOfGlyphs];
+        if (numberOfGlyphs == 0 || glyphRange.location >= numberOfGlyphs) {
+            return;
+        }
+        
+        // 确保glyphRange不超出边界
+        NSUInteger maxLength = numberOfGlyphs - glyphRange.location;
+        if (glyphRange.length > maxLength) {
+            glyphRange.length = maxLength;
+        }
+        
         [layoutManager drawBackgroundForGlyphRange:glyphRange atPoint:textFrame.origin];
         [layoutManager drawGlyphsForGlyphRange:glyphRange atPoint:textFrame.origin];
     } else {
