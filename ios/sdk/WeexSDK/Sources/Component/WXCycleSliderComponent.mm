@@ -698,6 +698,10 @@ typedef NS_ENUM(NSInteger, Direction) {
 
 - (void)_autoPlayOnTimer
 {
+    if (!_recycleSliderView) {
+        [self _stopAutoPlayTimer];
+        return;
+    }
     if (!_infinite && (_currentIndex == _recycleSliderView.itemViews.count - 1)) {
         [self _stopAutoPlayTimer];
     }else {

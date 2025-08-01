@@ -988,7 +988,7 @@ do {\
 
 - (void)drawTextWithContext:(CGContextRef)context bounds:(CGRect)bounds padding:(UIEdgeInsets)padding
 {
-    if (bounds.size.width <= 0 || bounds.size.height <= 0) {
+    if (bounds.size.width <= 0 || bounds.size.height <= 0 || !context) {
         return;
     }
     
@@ -1048,17 +1048,28 @@ do {\
         CGContextScaleCTM(context, 1.0, -1.0);
         
         NSAttributedString * attributedStringCopy = [self ctAttributedString];
-        if (!attributedStringCopy) {
+        if (!attributedStringCopy || attributedStringCopy.length == 0) {
+            CGContextRestoreGState(context);
             return;
         }
         //add path
         CGPathRef cgPath = CGPathCreateWithRect(textFrame, NULL);
+        if (!cgPath) {
+            CGContextRestoreGState(context);
+            return;
+        }
         CTFramesetterRef ctframesetterRef = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)(attributedStringCopy));
+        if (!ctframesetterRef) {
+            CGPathRelease(cgPath);
+            CGContextRestoreGState(context);
+            return;
+        }
         CTFrameRef coreTextFrameRef = CTFramesetterCreateFrame(ctframesetterRef, CFRangeMake(0, attributedStringCopy.length), cgPath, NULL);
         if (NULL == coreTextFrameRef) {
             // try to protect crash from frame is NULL
             CFRelease(ctframesetterRef);
             CGPathRelease(cgPath);
+            CGContextRestoreGState(context);
             return;
         }
         CFRelease(ctframesetterRef);
