@@ -61,7 +61,7 @@ WX_EXPORT_METHOD(@selector(getLayoutDirection:callback:))
 WX_EXPORT_METHOD(@selector(updateComponentData:componentData:callback:))
 WX_EXPORT_METHOD(@selector(beginBatchMark))
 WX_EXPORT_METHOD(@selector(endBatchMark))
-WX_EXPORT_METHOD(@selector(calculateTextHeightWithText:style:callback:))
+WX_EXPORT_METHOD(@selector(calculateTextSizeWithText:style:callback:))
 
 - (void)performBlockOnComponentManager:(void(^)(WXComponentManager *))block
 {
@@ -336,9 +336,9 @@ WX_EXPORT_METHOD(@selector(calculateTextHeightWithText:style:callback:))
     }];
 }
 
-- (CGFloat)calculateTextHeightWithText:(NSString *)text
-                                 style:(NSDictionary *)style
-                              callback:(WXModuleKeepAliveCallback)callback {
+- (CGFloat)calculateTextSizeWithText:(NSString *)text
+                               style:(NSDictionary *)style
+                            callback:(WXModuleCallback)callback {
     if (!text) {
         return 0;
     }
@@ -372,7 +372,8 @@ WX_EXPORT_METHOD(@selector(calculateTextHeightWithText:style:callback:))
                                  attributes:attributes
                                     context:nil];
     if (callback) {
-        callback(@{@"height":@(CGRectGetHeight(rect)/scaleFactor)},false);
+        callback(@{@"height":@(CGRectGetHeight(rect)/scaleFactor),
+                   @"width":@(CGRectGetWidth(rect)/scaleFactor)});
     }
 }
 
