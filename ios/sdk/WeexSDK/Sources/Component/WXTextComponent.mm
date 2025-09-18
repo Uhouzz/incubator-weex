@@ -43,6 +43,7 @@
 @property (nonatomic, copy) NSString *fontFamily;
 @property (nonatomic, copy) NSString *fontWidth;
 @property (nonatomic, strong) NSDictionary *extra;
+@property (nonatomic, assign) BOOL literalSearch;
 
 @end
 
@@ -371,6 +372,7 @@ do {\
             info.fontFamily = map[@"fontFamily"] ? : self.fontFamily;
             info.fontWidth = map[@"fontWidth"] ? : self.fontWidth;
             info.extra = map[@"extra"];
+            info.literalSearch = [WXConvert BOOL:map[@"literalSearch"]];
             [_richContentArray addObject:info];
         }
         [self setNeedsRepaint];
@@ -806,7 +808,7 @@ do {\
             NSMutableArray<NSValue *> *ranges = [NSMutableArray array];
 
             while (searchStartIndex < originalString.length) {
-                NSRange range = [originalString rangeOfString:info.text options:NSCaseInsensitiveSearch range:NSMakeRange(searchStartIndex, originalString.length - searchStartIndex)];
+                NSRange range = [originalString rangeOfString:info.text options:info.literalSearch ? NSLiteralSearch : NSCaseInsensitiveSearch range:NSMakeRange(searchStartIndex, originalString.length - searchStartIndex)];
                 if (range.location != NSNotFound) {
                     [ranges addObject:[NSValue valueWithRange:range]];
                     if (info.color) {
