@@ -28,6 +28,7 @@
 #import "WXComponent+PseudoClassManagement.h"
 #import "WXTextInputComponent.h"
 #import "WXComponent+Layout.h"
+#import "WXAppConfiguration.h"
 
 @interface WXEditComponent()
 {
@@ -205,7 +206,12 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     [self updatePattern];
     
     if (!self.hideDoneButton) {
-        UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(closeKeyboard)];
+        UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithTitle:[WXAppConfiguration editCompleteTitle]?:@"" style:UIBarButtonItemStylePlain target:self action:@selector(closeKeyboard)];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 260000
+    if (@available(iOS 26, *)) {
+        barButton.hidesSharedBackground = YES;
+    }
+#endif
         UIBarButtonItem *space = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
         UIToolbar *toolbar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 0, 0, 44)];
         toolbar.items = [NSArray arrayWithObjects:space, barButton, nil];

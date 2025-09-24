@@ -69,6 +69,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSURLSessionConfiguration *)customizeSessionConfig;
 + (void)setCustomizeSessionConfig:(NSURLSessionConfiguration *)customizeSessionConfig;
 
++ (NSString *)editCompleteTitle;
++ (void)setEditCompleteTitle:(NSString *)title;
 
 @end
 

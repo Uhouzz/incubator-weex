@@ -29,6 +29,7 @@
 @property (nonatomic, assign) NSUInteger JSFrameworkLibSize;
 @property (nonatomic, strong) NSArray  * customizeProtocolClasses;
 @property (nonatomic, strong) NSURLSessionConfiguration  *customizeSessionConfig;
+@property (nonatomic, strong) NSString  *editCompleteTitle;
 
 @end
 
@@ -120,5 +121,12 @@
     [WXAppConfiguration sharedConfiguration].customizeSessionConfig = customizeSessionConfig;
 }
 
++ (void)setEditCompleteTitle:(NSString *)title {
+    [WXAppConfiguration sharedConfiguration].editCompleteTitle = title;
+}
+
++ (NSString *)editCompleteTitle {
+    return [WXAppConfiguration sharedConfiguration].editCompleteTitle;
+}
 
 @end

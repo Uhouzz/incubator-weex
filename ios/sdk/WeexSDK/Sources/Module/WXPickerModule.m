@@ -110,12 +110,8 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
     if (options[@"confirmTitle"]) {
         self.confirmTitle = [WXConvert NSString:options[@"confirmTitle"]];
     }
-    if (options[@"cancelTitleColor"]) {
-        self.cancelTitleColor = [WXConvert UIColor:options[@"cancelTitleColor"]];
-    }
-    if (options[@"confirmTitleColor"]) {
-        self.confirmTitleColor = [WXConvert UIColor:options[@"confirmTitleColor"]];
-    }
+    self.cancelTitleColor = [WXConvert UIColor:options[@"cancelTitleColor"]]?:[WXConvert UIColor:@"#333333"];
+    self.confirmTitleColor = [WXConvert UIColor:options[@"confirmTitleColor"]]?:[WXConvert UIColor:@"#ff5a5f"];
     if (options[@"titleBackgroundColor"]) {
         self.titleBackgroundColor = [WXConvert UIColor:options[@"titleBackgroundColor"]];
     }
@@ -300,6 +296,12 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
     if(self.cancelTitleColor){
         cancelBtn.tintColor = self.cancelTitleColor;
     }
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 260000
+    if (@available(iOS 26, *)) {
+        doneBtn.hidesSharedBackground = YES;
+        cancelBtn.hidesSharedBackground = YES;
+    }
+#endif
     UIBarButtonItem* flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     [toolBar setItems:[NSArray arrayWithObjects:noSpace,cancelBtn,flexSpace,doneBtn,noSpace, nil]];
     UILabel *titleLabel = [UILabel new];
@@ -543,11 +545,21 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
         cancelTitle = [WXConvert NSString:options[@"cancelTitle"]];
     }
     
-    [self configDatePickerViewWithConfirmTitle:confirmTitle cancelTitle:cancelTitle];
+    UIColor *cancelTitleColor = [WXConvert UIColor:options[@"cancelTitleColor"]]?:[WXConvert UIColor:@"#333333"];
+    UIColor *confirmTitleColor = [WXConvert UIColor:options[@"confirmTitleColor"]]?:[WXConvert UIColor:@"#ff5a5f"];
+
+    [self configDatePickerViewWithConfirmTitle:confirmTitle
+                                   cancelTitle:cancelTitle
+                             confirmTitleColor:confirmTitleColor
+                              cancelTitleColor:cancelTitleColor];
     [self show];
 }
 
--(void)configDatePickerViewWithConfirmTitle:(NSString *)done cancelTitle:(NSString *)cancel
+-(void)configDatePickerViewWithConfirmTitle:(NSString *)done
+                                cancelTitle:(NSString *)cancel
+                          confirmTitleColor:(UIColor *)confirmTitleColor
+                           cancelTitleColor:(UIColor *)cancelTitleColor
+
 {
     self.backgroundView = [self createbackgroundView];
     UITapGestureRecognizer *tapGesture=[[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(cancel:)];
@@ -568,13 +580,25 @@ WX_EXPORT_METHOD(@selector(pickDateTime:callback:))
     }else {
         doneBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneDatePicker:)];
     }
-    
+    if(confirmTitleColor){
+        doneBtn.tintColor = confirmTitleColor;
+    }
+
     UIBarButtonItem *cancelBtn;
     if (cancel.length >0) {
         cancelBtn = [[UIBarButtonItem alloc] initWithTitle:cancel style:UIBarButtonItemStylePlain target:self action:@selector(cancelDatePicker:)];
     }else {
         cancelBtn = [[UIBarButtonItem alloc]initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancelDatePicker:)];
     }
+    if(cancelTitleColor){
+        cancelBtn.tintColor = cancelTitleColor;
+    }
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 260000
+    if (@available(iOS 26, *)) {
+        doneBtn.hidesSharedBackground = YES;
+        cancelBtn.hidesSharedBackground = YES;
+    }
+#endif
     UIBarButtonItem* flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     [toolBar setItems:[NSArray arrayWithObjects:noSpace,cancelBtn,flexSpace,doneBtn,noSpace, nil]];
     [self.pickerView addSubview:toolBar];
