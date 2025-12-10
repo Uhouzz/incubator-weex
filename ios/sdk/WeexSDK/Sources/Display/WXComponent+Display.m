@@ -461,7 +461,9 @@ typedef NS_ENUM(NSInteger, WXComponentBorderRecord) {
     if (_clipToBounds && _clipRadius) {
         BOOL radiusEqual = _borderTopLeftRadius == _borderTopRightRadius && _borderTopRightRadius == _borderBottomRightRadius && _borderBottomRightRadius == _borderBottomLeftRadius;
         if (!radiusEqual) {
-            self.layer.mask = [self drawBorderRadiusMaskLayer:rect];
+            WXPerformBlockOnMainThread(^{
+                self.layer.mask = [self drawBorderRadiusMaskLayer:rect];
+            });
         }
     }
 }

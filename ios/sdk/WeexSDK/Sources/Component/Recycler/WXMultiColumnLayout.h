@@ -28,7 +28,7 @@ extern NSString * const kCollectionSupplementaryViewKindHeader;
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView contentWidthForLayout:(UICollectionViewLayout *)collectionViewLayout;
 
-- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout heightForItemAtIndexPath:(NSIndexPath *)indexPath;
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath;
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout heightForHeaderInSection:(NSInteger)section;
 
@@ -52,6 +52,7 @@ extern NSString * const kCollectionSupplementaryViewKindHeader;
 
 @property (nonatomic, assign) float columnGap;
 @property (nonatomic, assign) float minContentSizeHeight;
+@property (nonatomic, assign) UICollectionViewScrollDirection scrollDirection;
 
 @property (nonatomic, assign, readonly) CGFloat computedColumnWidth;
 @property (nonatomic, assign, readonly) int computedColumnCount;

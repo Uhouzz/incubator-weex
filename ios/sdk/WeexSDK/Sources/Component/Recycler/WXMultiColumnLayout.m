@@ -48,7 +48,8 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
 @interface WXMultiColumnLayout ()
 
 @property (nonatomic, strong) NSMutableDictionary<NSString *, NSDictionary<id, UICollectionViewLayoutAttributes *> *> *layoutAttributes;
-@property (nonatomic, strong) NSMutableArray<NSNumber *> *columnsMaxHeights;
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *columnsMaxPositions;
+@property (nonatomic, assign) CGFloat maxCellHeight;
 
 @end
 
@@ -58,7 +59,8 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
 {
     if (self = [super init]) {
         _layoutAttributes = [NSMutableDictionary dictionary];
-        _columnsMaxHeights = [NSMutableArray array];
+        _columnsMaxPositions = [NSMutableArray array];
+        _scrollDirection = UICollectionViewScrollDirectionVertical;
     }
     
     return self;
@@ -148,12 +150,15 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     float columnWidth = self.computedColumnWidth;
     int columnCount = self.computedColumnCount;
     float columnGap = self.columnGap;
-    
-    CGFloat currentHeight = insets.top;
+    CGFloat currentMaxPosition = insets.top;
+    if (_scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+        currentMaxPosition = insets.left;
+        _maxCellHeight = 0;
+    }
     NSMutableDictionary *headersAttributes = [NSMutableDictionary dictionaryWithCapacity:numberOfSections];
     NSMutableDictionary *cellAttributes = [NSMutableDictionary dictionary];
     for (NSInteger i = 0; i < columnCount; i++) {
-        [self.columnsMaxHeights addObject:@(currentHeight)];
+        [self.columnsMaxPositions addObject:@(currentMaxPosition)];
     }
     
     for (NSInteger section = 0; section < numberOfSections; section++) {
@@ -162,13 +167,13 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
         if (hasHeader) {
             CGFloat headerHeight = [self.delegate collectionView:[self weakCollectionView]  layout:self heightForHeaderInSection:section];
             WXMultiColumnLayoutHeaderAttributes *headerAttributes = [WXMultiColumnLayoutHeaderAttributes layoutAttributesForSupplementaryViewOfKind:kCollectionSupplementaryViewKindHeader withIndexPath:[NSIndexPath indexPathForItem:0 inSection:section]];
-            headerAttributes.frame = CGRectMake(insets.left, currentHeight, self.contentWidth - (insets.left + insets.right), headerHeight);
+            headerAttributes.frame = CGRectMake(insets.left, currentMaxPosition, self.contentWidth - (insets.left + insets.right), headerHeight);
             headerAttributes.isSticky = [self.delegate collectionView:[self weakCollectionView] layout:self isNeedStickyForHeaderInSection:section];
             headerAttributes.topOffset = [self.delegate collectionView:[self weakCollectionView] layout:self topOffsetForHeaderInSection:section];
             headerAttributes.zIndex = headerAttributes.isSticky ? 1 : 0;
             headersAttributes[@(section)] = headerAttributes;
-            currentHeight = CGRectGetMaxY(headerAttributes.frame);
-            [self _columnsReachToHeight:currentHeight];
+            currentMaxPosition = CGRectGetMaxY(headerAttributes.frame);
+            [self _columnsReachToPosition:currentMaxPosition];
         }
         
         // cells
@@ -176,28 +181,50 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
         @try {
             for (NSInteger item = 0; item < [[self weakCollectionView] numberOfItemsInSection:section]; item++) {
                 NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
-                CGFloat itemHeight = [self.delegate collectionView:[self weakCollectionView] layout:self heightForItemAtIndexPath:indexPath];
+                CGSize itemSize = [self.delegate collectionView:[self weakCollectionView] layout:self sizeForItemAtIndexPath:indexPath];
+                CGFloat itemHeight = itemSize.height;
                 UICollectionViewLayoutAttributes *itemAttributes = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
-                NSUInteger column = [self _minHeightColumnForAllColumns];
-                CGFloat x = insets.left + (columnWidth + columnGap) * column+_leftGap;
-                if (column >= [self.columnsMaxHeights count]) {
+                NSUInteger column = [self _minPositionColumnForAllColumns];
+                if (column >= [self.columnsMaxPositions count]) {
                     return;
                 }
-                CGFloat y = [self.columnsMaxHeights[column] floatValue];
-                itemAttributes.frame = CGRectMake(x, y, columnWidth, itemHeight);
-                cellAttributes[indexPath] = itemAttributes;
                 
-                self.columnsMaxHeights[column] = @(CGRectGetMaxY(itemAttributes.frame));
+                CGFloat x, y, width, height;
+                if (_scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+                    // Horizontal layout: items flow left to right, columns are rows
+                    x = [self.columnsMaxPositions[column] floatValue];
+                    y = 0;
+                    width = columnWidth;  // In horizontal mode, itemHeight becomes width
+                    height = itemHeight; // columnWidth becomes height
+                    self.columnsMaxPositions[column] = @(x + width);
+                    if (itemHeight > _maxCellHeight) {
+                        _maxCellHeight = itemHeight;
+                    }
+                } else {
+                    // Vertical layout: items flow top to bottom, columns are columns
+                    x = insets.left + (columnWidth + columnGap) * column + _leftGap;
+                    y = [self.columnsMaxPositions[column] floatValue];
+                    width = columnWidth;
+                    height = itemHeight;
+                    self.columnsMaxPositions[column] = @(y + height);
+                }
+                
+                itemAttributes.frame = CGRectMake(x, y, width, height);
+                cellAttributes[indexPath] = itemAttributes;
             }
         } @catch (NSException *exception) {
             WXLog(@"%@", exception);
         }
-        currentHeight = [self _maxHeightForAllColumns];
-        [self _columnsReachToHeight:currentHeight];
+        currentMaxPosition = [self _maxPositionForAllColumns];
+        [self _columnsReachToPosition:currentMaxPosition];
     }
     
-    currentHeight = currentHeight + insets.bottom;
-    [self _columnsReachToHeight:currentHeight];
+    if (_scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+        currentMaxPosition = currentMaxPosition + insets.right;
+    } else {
+        currentMaxPosition = currentMaxPosition + insets.bottom;
+    }
+    [self _columnsReachToPosition:currentMaxPosition];
     
     self.layoutAttributes[kMultiColumnLayoutHeader] = headersAttributes;
     self.layoutAttributes[kMultiColumnLayoutCell] = cellAttributes;
@@ -209,7 +236,14 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     if (numberOfSections == 0) {
         return CGSizeZero;
     }
-    return CGSizeMake(self.contentWidth, MAX(self.contentHeight, self.minContentSizeHeight));
+    CGSize contentSize;
+    if (_scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+        contentSize = CGSizeMake(MAX([self _maxPositionForAllColumns], self.minContentSizeHeight), _maxCellHeight);
+    } else {
+        contentSize = CGSizeMake(self.contentWidth, MAX([self _maxPositionForAllColumns], self.minContentSizeHeight));
+    }
+    
+    return contentSize;
 }
 
 - (NSArray<UICollectionViewLayoutAttributes *> *)layoutAttributesForElementsInRect:(CGRect)rect
@@ -321,33 +355,30 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     return [self.delegate collectionView:[self weakCollectionView] contentWidthForLayout:self];
 }
 
-- (CGFloat)contentHeight
-{
-    return [self _maxHeightForAllColumns];
-}
 
-- (CGFloat)_maxHeightForAllColumns
+
+- (CGFloat)_maxPositionForAllColumns
 {
-    CGFloat maxHeight = 0.0;
-    for (NSNumber *number in self.columnsMaxHeights) {
-        CGFloat height = [number floatValue];
-        if (height > maxHeight) {
-            maxHeight = height;
+    CGFloat maxValue = 0.0;
+    for (NSNumber *number in self.columnsMaxPositions) {
+        CGFloat value = [number floatValue];
+        if (value > maxValue) {
+            maxValue = value;
         }
     }
     
-    return maxHeight;
+    return maxValue;
 }
 
-- (NSUInteger)_minHeightColumnForAllColumns
+- (NSUInteger)_minPositionColumnForAllColumns
 {
     __block NSUInteger index = 0;
-    __block CGFloat minHeight = FLT_MAX;
+    __block CGFloat minValue = FLT_MAX;
     
-    [self.columnsMaxHeights enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-        CGFloat height = [obj floatValue];
-        if (height < minHeight) {
-            minHeight = height;
+    [self.columnsMaxPositions enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+        CGFloat value = [obj floatValue];
+        if (value < minValue) {
+            minValue = value;
             index = idx;
         }
     }];
@@ -355,17 +386,17 @@ NSString * const kMultiColumnLayoutCell = @"WXMultiColumnLayoutCell";
     return index;
 }
 
-- (void)_columnsReachToHeight:(CGFloat)height
+- (void)_columnsReachToPosition:(CGFloat)position
 {
-    for (NSInteger i = 0; i < self.columnsMaxHeights.count; i ++) {
-        self.columnsMaxHeights[i] = @(height);
+    for (NSInteger i = 0; i < self.columnsMaxPositions.count; i ++) {
+        self.columnsMaxPositions[i] = @(position);
     }
 }
 
 - (void)_cleanup
 {
     [self.layoutAttributes removeAllObjects];
-    [self.columnsMaxHeights removeAllObjects];
+    [self.columnsMaxPositions removeAllObjects];
 }
 
 - (void)_cleanComputed

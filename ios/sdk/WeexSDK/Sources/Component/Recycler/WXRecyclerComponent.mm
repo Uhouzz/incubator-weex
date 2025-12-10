@@ -136,7 +136,7 @@ typedef enum : NSUInteger {
     if (self = [super initWithRef:ref type:type styles:styles attributes:attributes events:events weexInstance:weexInstance]) {
         [self _fillPadding];
         
-        if ([type isEqualToString:@"waterfall"] || (attributes[@"layout"] && [attributes[@"layout"] isEqualToString:@"multi-column"])) {
+        if ([type isEqualToString:@"waterfall"] || [type isEqualToString:@"recycler"] || (attributes[@"layout"] && [attributes[@"layout"] isEqualToString:@"multi-column"])) {
             // TODO: abstraction
             _layoutType = WXRecyclerLayoutTypeMultiColumn;
             CGFloat scaleFactor = weexInstance.pixelScaleFactor;
@@ -152,6 +152,10 @@ typedef enum : NSUInteger {
                 layout.rightGap = [WXConvert WXPixelType:attributes[@"rightGap"] scaleFactor:scaleFactor];
             }
             layout.columnGap = [self _floatValueForColumnGap:([WXConvert WXLength:attributes[@"columnGap"] isFloat:YES scaleFactor:scaleFactor] ? : [WXLength lengthWithFloat:0.0 type:WXLengthTypeNormal])];
+            
+            if (attributes[@"scrollDirection"] && [attributes[@"scrollDirection"] isEqualToString:@"horizontal"]) {
+                layout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
+            }
             
             layout.delegate = self;
         } else {
@@ -203,6 +207,7 @@ typedef enum : NSUInteger {
     _collectionView.allowsMultipleSelection = NO;
     _collectionView.dataSource = self;
     _collectionView.delegate = self;
+    
     if ([_collectionViewlayout isKindOfClass:[WXMultiColumnLayout class]]) {
         WXMultiColumnLayout* wxLayout = (WXMultiColumnLayout *)_collectionViewlayout;
         wxLayout.weak_collectionView = _collectionView;
@@ -279,6 +284,14 @@ typedef enum : NSUInteger {
         }
         if (attributes[@"rightGap"]) {
             layout.rightGap = [WXConvert WXPixelType:attributes[@"rightGap"] scaleFactor:scaleFactor];
+        }
+        
+        if (attributes[@"scrollDirection"]) {
+            UICollectionViewScrollDirection newDirection = [attributes[@"scrollDirection"] isEqualToString:@"horizontal"] ? UICollectionViewScrollDirectionHorizontal : UICollectionViewScrollDirectionVertical;
+            if (newDirection != layout.scrollDirection) {
+                layout.scrollDirection = newDirection;
+                needUpdateLayout = YES;
+            }
         }
         
         if (needUpdateLayout) {
@@ -506,10 +519,9 @@ typedef enum : NSUInteger {
     return [self safeContainerStyleWidth];
 }
 
-- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout heightForItemAtIndexPath:(NSIndexPath *)indexPath
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    CGSize itemSize = [self.dataController sizeForItemAtIndexPath:indexPath];
-    return itemSize.height;
+    return [self.dataController sizeForItemAtIndexPath:indexPath];
 }
 
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout heightForHeaderInSection:(NSInteger)section

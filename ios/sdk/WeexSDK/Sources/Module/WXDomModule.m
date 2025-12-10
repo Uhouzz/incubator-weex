@@ -207,6 +207,9 @@ WX_EXPORT_METHOD(@selector(calculateTextSizeWithText:style:callback:))
 
 - (void)scrollToElement:(NSString *)elemRef options:(NSDictionary *)dict
 {
+    if (!elemRef || elemRef.length == 0) {
+        return;
+    }
     [self performBlockOnComponentManager:^(WXComponentManager *manager) {
         [manager scrollToComponent:elemRef options:dict];
     }];
@@ -334,6 +337,74 @@ WX_EXPORT_METHOD(@selector(calculateTextSizeWithText:style:callback:))
         // Destroy weexcore c++ page and objects.
         [WXCoreBridge closePage:instanceId];
     }];
+}
+
+
++ (CGFloat)fontSizeToFitText:(NSString *)text
+                    withFont:(UIFont *)font
+                     maxSize:(CGSize)maxSize
+           minimumScaleFactor:(CGFloat)minimumScaleFactor
+                  singleLine:(BOOL)singleLine
+{
+    if (text.length == 0 || !font) return font.pointSize;
+    if (minimumScaleFactor <= 0.0) minimumScaleFactor = 0.5;
+    if (minimumScaleFactor > 1.0) minimumScaleFactor = 1.0;
+
+    CGFloat maxFontSize = font.pointSize;
+    CGFloat minFontSize = maxFontSize * minimumScaleFactor;
+    
+    // 如果原字号已经能放下，就直接返回
+    if ([self text:text fitsSize:maxSize font:font size:maxFontSize singleLine:singleLine]) {
+        return maxFontSize;
+    }
+    
+    // 如果最小字号仍然放不下，就直接返回最小字号
+    if (![self text:text fitsSize:maxSize font:font size:minFontSize singleLine:singleLine]) {
+        return minFontSize;
+    }
+    
+    // 二分查找合适字号
+    CGFloat low = minFontSize;
+    CGFloat high = maxFontSize;
+    CGFloat best = minFontSize;
+    const CGFloat epsilon = 0.1; // 精度 0.1 pt
+    
+    while (high - low > epsilon) {
+        CGFloat mid = (low + high) / 2.0;
+        if ([self text:text fitsSize:maxSize font:font size:mid singleLine:singleLine]) {
+            best = mid;
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    
+    return round(best * 100) / 100.0; // 保留 2 位小数
+}
+
+#pragma mark - Private helper
+
++ (BOOL)text:(NSString *)text
+     fitsSize:(CGSize)maxSize
+         font:(UIFont *)font
+         size:(CGFloat)fontSize
+   singleLine:(BOOL)singleLine
+{
+    UIFont *testFont = [font fontWithSize:fontSize];
+    NSDictionary *attrs = @{ NSFontAttributeName: testFont };
+    
+    CGSize constraint = singleLine ? CGSizeMake(CGFLOAT_MAX, maxSize.height) : maxSize;
+    
+    CGRect rect = [text boundingRectWithSize:constraint
+                                     options:(NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading)
+                                  attributes:attrs
+                                     context:nil];
+    
+    if (singleLine) {
+        return ceil(rect.size.width) <= maxSize.width && ceil(rect.size.height) <= maxSize.height;
+    } else {
+        return ceil(rect.size.width) <= maxSize.width && ceil(rect.size.height) <= maxSize.height;
+    }
 }
 
 - (CGFloat)calculateTextSizeWithText:(NSString *)text
