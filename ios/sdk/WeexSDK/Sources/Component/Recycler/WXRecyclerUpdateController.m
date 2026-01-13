@@ -251,14 +251,17 @@
     
     [collectionView deleteItemsAtIndexPaths:[diffResult.deleteIndexPaths allObjects]];
     [collectionView insertItemsAtIndexPaths:[diffResult.insertIndexPaths allObjects]];
-//    [collectionView reloadItemsAtIndexPaths:[reloadIndexPaths allObjects]];
     
     [collectionView deleteSections:diffResult.deleteSections];
     [collectionView insertSections:diffResult.insertSections];
-//    [collectionView reloadSections:diffResult.reloadSections];
     
-    [collectionView reloadData];
-    [collectionView.collectionViewLayout invalidateLayout];
+    // 使用增量 reload 代替全量 reloadData，避免闪屏
+    if (diffResult.reloadSections.count > 0) {
+        [collectionView reloadSections:diffResult.reloadSections];
+    }
+    if (reloadIndexPaths.count > 0) {
+        [collectionView reloadItemsAtIndexPaths:[reloadIndexPaths allObjects]];
+    }
 }
 
 @end
