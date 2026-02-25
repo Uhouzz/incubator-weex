@@ -194,6 +194,7 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     _border = UIEdgeInsetsZero;
     self.userInteractionEnabled = YES;
     [self setType];
+    [self setTextContentType];
     [self setAutofocus:_autofocus];
     [self setTextFont];
     [self setPlaceholderAttributedString];
@@ -451,6 +452,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     if (attributes[@"type"]) {
         _inputType = [WXConvert NSString:attributes[@"type"]];
         [self setType];
+    }
+    if(attributes[@"contenttype"]) {
+        _contentType = [WXConvert NSString:attributes[@"contenttype"]];
+        [self setTextContentType];
     }
     if (attributes[@"autofocus"]) {
         self.autofocus = [attributes[@"autofocus"] boolValue];
@@ -939,6 +944,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
 - (void)setTextContentType{
     if ([_contentType isEqualToString:@"onetimecode"]) {
         [self setTextContentType:UITextContentTypeOneTimeCode];
+    } else if ([_contentType isEqualToString:@"tel"]) {
+        [self setTextContentType:UITextContentTypeTelephoneNumber];
+    } else if ([_contentType isEqualToString:@"email"]) {
+        [self setTextContentType:UITextContentTypeEmailAddress];
     }
 }
 
@@ -951,8 +960,10 @@ WX_EXPORT_METHOD(@selector(setTextFormatter:))
     }else if ([_inputType isEqualToString:@"password"]) {
         [self setSecureTextEntry:YES];
     }else if ([_inputType isEqualToString:@"tel"]) {
+        [self setTextContentType:UITextContentTypeTelephoneNumber];
         [self setKeyboardType:UIKeyboardTypePhonePad];
     }else if ([_inputType isEqualToString:@"email"]) {
+        [self setTextContentType:UITextContentTypeEmailAddress];
         [self setKeyboardType:UIKeyboardTypeEmailAddress];
     }else if ([_inputType isEqualToString:@"url"]) {
         [self setKeyboardType:UIKeyboardTypeURL];
