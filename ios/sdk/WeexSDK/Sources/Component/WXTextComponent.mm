@@ -629,6 +629,12 @@ do {\
             NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
             NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
             computedSize = [layoutManager usedRectForTextContainer:textContainer].size;
+            // For iconfont, the font metrics (ascent + descent + leading) are typically
+            // larger than the actual glyph visual size. Use fontSize as the height when
+            // lineHeight is not explicitly set, to avoid inflated layout height.
+            if ([strongSelf.fontFamily isEqualToString:@"uhomesfont"] && strongSelf->_fontSize > 0 && !strongSelf->_lineHeight) {
+                computedSize.height = MIN(computedSize.height, strongSelf->_fontSize);
+            }
         } else {
             computedSize = [strongSelf calculateTextHeightWithWidth:constrainedSize.width];
         }
